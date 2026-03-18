@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Fomo Markets",
+    "slug": "fomo-markets",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F0EDE6",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fomomarkets.app"
+    },
+    "android": {
+      "package": "com.fomomarkets.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png",
+      "build": {
+        "babel": {
+          "include": ["@supabase/supabase-js"]
+        }
+      }
+    },
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
+}
