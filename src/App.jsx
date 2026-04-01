@@ -10,7 +10,6 @@ import CategoryDropdown from "./components/CategoryDropdown";
 import FilterModal from "./components/FilterModal";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 import { SkeletonList } from "./components/SkeletonCard";
-import RoleSelection from "./components/RoleSelection";
 
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS  (extracted frame-by-frame from the video)
@@ -27,195 +26,156 @@ const FONT   = "'Sora', system-ui, sans-serif";
 /* category label colors - now imported from categories.js */
 
 /* ─────────────────────────────────────────────────────────────
-   MOCK DATA  – Updated with upcoming events for April 2026
+   MOCK DATA  – matches every event visible in the video
 ───────────────────────────────────────────────────────────── */
 const EVENTS = [
   {
     id:"1", title:"Oranjezicht City Farm Market", organiser:"OZCF",
     category:"Market", today:true,
-    dateLabel:"Fri, 4 Apr · 09:00–14:00",
-    start:"2026-04-04T09:00", end:"2026-04-04T14:00",
+    dateLabel:"Fri, 6 Mar · 09:00–14:00",
+    start:"2026-03-06T09:00", end:"2026-03-06T14:00",
     area:"V&A Waterfront, Cape Town",
     location:"V&A Waterfront", address:"V&A Waterfront\nCape Town",
     latitude:-33.9035, longitude:18.4200,
     phone:"+27 21 424 0805", website:"ozcfmarket.com", instagram:"@ozcfmarket",
-    img:"https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
+    img:"https://picsum.photos/seed/market1/800/500",
     desc:"Cape Town's favourite weekly market. Fresh local produce, artisan goods, food stalls and a stunning harbour view every Friday and Saturday.",
   },
   {
     id:"2", title:"Neighbourhood Goods Market", organiser:"NGM",
     category:"Market",
-    dateLabel:"Sat, 5 Apr · 09:30–15:00",
-    start:"2026-04-05T09:30", end:"2026-04-05T15:00",
+    dateLabel:"Sat, 7 Mar · 09:30–15:00",
+    start:"2026-03-07T09:30", end:"2026-03-07T15:00",
     area:"Woodstock, Cape Town",
     location:"The Old Biscuit Mill", address:"375 Albert Rd\nWoodstock, Cape Town",
     latitude:-33.9275, longitude:18.4570,
     phone:"+27 21 448 1438", instagram:"@neighbourgoodsmarket",
-    img:"https://images.unsplash.com/photo-1531058020387-3be344556be6?w=800&q=80",
+    img:"https://picsum.photos/seed/market2/800/500",
     desc:"The iconic Saturday market at the Old Biscuit Mill. Artisan food, craft goods, flowers and world-class coffee every week.",
   },
   {
     id:"3", title:"Greenside Morning Farmers Market", organiser:"Greenside Market",
     category:"Market",
-    dateLabel:"Mon, 7 Apr · 07:30–12:00",
-    start:"2026-04-07T07:30", end:"2026-04-07T12:00",
+    dateLabel:"Mon, 9 Mar · 07:30–12:00",
+    start:"2026-03-09T07:30", end:"2026-03-09T12:00",
     area:"Greenside, Johannesburg",
     location:"Greenside", address:"Greenside\nJohannesburg",
     latitude:-26.1520, longitude:28.0180,
     phone:"+27 82 111 2233",
-    img:"https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=80",
+    img:"https://picsum.photos/seed/market3/800/500",
     desc:"A relaxed community market with organic produce, homemade preserves and fresh flowers every Monday morning.",
   },
   {
     id:"4", title:"Durban Street Food Festival", organiser:"Durban Events Co",
     category:"Fun",
-    dateLabel:"Sat, 12 Apr · 11:00–20:00",
-    start:"2026-04-12T11:00", end:"2026-04-12T20:00",
+    dateLabel:"Tue, 10 Mar · 11:00–20:00",
+    start:"2026-03-10T11:00", end:"2026-03-10T20:00",
     area:"Stamford Hill, Durban",
     location:"Moses Mabhida Stadium Precinct",
     address:"44 Isaiah Ntshangase Rd, Durban\nStamford Hill, Durban",
     latitude:-29.8290, longitude:31.0300,
     phone:"+27 31 000 5678", whatsapp:"+27310005678",
-    img:"https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80",
+    img:"https://picsum.photos/seed/food4/800/500",
     desc:"A celebration of Durban's incredible street food scene. From bunny chow to vetkoek, breyani to grilled corn — if you love bold flavours, this is your weekend. Street performers, DJ sets, and family fun.",
   },
   {
     id:"5", title:"Cape Town Art Fair Pop-Up", organiser:"CT Art Collective",
     category:"Event",
-    dateLabel:"Sun, 6 Apr · 10:00–18:00",
-    start:"2026-04-06T10:00", end:"2026-04-06T18:00",
+    dateLabel:"Wed, 11 Mar · 10:00–18:00",
+    start:"2026-03-11T10:00", end:"2026-03-11T18:00",
     area:"De Waterkant, Cape Town",
     location:"Cape Quarter Lifestyle Village",
     address:"Napier St, De Waterkant\nDe Waterkant, Cape Town",
     latitude:-33.9150, longitude:18.4120,
     instagram:"@ctartcollective",
-    img:"https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&q=80",
+    img:"https://picsum.photos/seed/art5/800/500",
     desc:"Discover emerging South African artists at this curated pop-up gallery. Over 40 artists showing paintings, photography, sculpture, and digital art. Buy original works or browse for inspiration.",
   },
   {
     id:"6", title:"Trail Run: Table Mountain Explorer", organiser:"Trail Run SA",
     category:"Fun",
-    dateLabel:"Sat, 19 Apr · 06:30–13:00",
-    start:"2026-04-19T06:30", end:"2026-04-19T13:00",
+    dateLabel:"Thu, 12 Mar · 06:30–13:00",
+    start:"2026-03-12T06:30", end:"2026-03-12T13:00",
     area:"Gardens, Cape Town",
     location:"Tafelberg Road Parking",
     address:"Tafelberg Rd, Table Mountain\nGardens, Cape Town",
     latitude:-33.9500, longitude:18.4000,
     phone:"+27 72 999 3344", website:"trailrunsa.co.za",
-    img:"https://images.unsplash.com/photo-1552674605-4695231af19f?w=800&q=80",
+    img:"https://picsum.photos/seed/trail6/800/500",
     desc:"Join 300 runners for a breathtaking trail run on the slopes of Table Mountain. Three distance options: 10km, 21km, and 42km. All levels welcome. Medals, refreshments, and stunning views guaranteed.",
   },
   {
     id:"7", title:"Pretoria Night Market", organiser:"Tshwane Events",
     category:"Market",
-    dateLabel:"Fri, 11 Apr · 17:00–22:30",
-    start:"2026-04-11T17:00", end:"2026-04-11T22:30",
+    dateLabel:"Fri, 13 Mar · 17:00–22:30",
+    start:"2026-03-13T17:00", end:"2026-03-13T22:30",
     area:"Pretoria CBD, Pretoria",
     location:"Church Square", address:"Church Square\nPretoria CBD, Pretoria",
     latitude:-25.7460, longitude:28.1880,
     phone:"+27 12 358 4000",
-    img:"https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
+    img:"https://picsum.photos/seed/night7/800/500",
     desc:"Pretoria's favourite evening market under the stars. Street food, craft beers, live music and artisan goods in the heart of the city.",
   },
   {
     id:"8", title:"Maboneng Sunday Market", organiser:"Maboneng Precinct",
     category:"Market",
-    dateLabel:"Sun, 13 Apr · 10:00–16:00",
-    start:"2026-04-13T10:00", end:"2026-04-13T16:00",
+    dateLabel:"Sat, 14 Mar · 10:00–16:00",
+    start:"2026-03-14T10:00", end:"2026-03-14T16:00",
     area:"Maboneng, Johannesburg",
     location:"Arts on Main", address:"264 Fox St\nMaboneng, Johannesburg",
     latitude:-26.2040, longitude:28.0600,
     phone:"+27 11 447 8194",
-    img:"https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=800&q=80",
+    img:"https://picsum.photos/seed/maboneng8/800/500",
     desc:"The iconic Sunday market in Maboneng. Artists, makers, food vendors and musicians come together in Joburg's most creative neighbourhood.",
   },
   {
     id:"9", title:"Yoga in the Botanical Gardens", organiser:"Mindful Cape Town",
     category:"Other",
-    dateLabel:"Sun, 6 Apr · 06:30–08:30",
-    start:"2026-04-06T06:30", end:"2026-04-06T08:30",
+    dateLabel:"Sun, 8 Mar · 06:30–08:30",
+    start:"2026-03-08T06:30", end:"2026-03-08T08:30",
     area:"Newlands, Cape Town",
     location:"Kirstenbosch National Botanical Garden",
     address:"Rhodes Dr, Newlands\nNewlands, Cape Town",
     latitude:-33.9900, longitude:18.4300,
     phone:"+27 82 444 7890", whatsapp:"+27824447890",
-    img:"https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&q=80",
+    img:"https://picsum.photos/seed/yoga9/800/500",
     desc:"Find your centre among the ferns and fynbos. A 90-minute sunrise yoga session with certified instructor Thandi Mokoena. All levels welcome. Bring your own mat.",
   },
   {
     id:"10", title:"Joburg Craft Beer Festival", organiser:"Brew Culture SA",
     category:"Fun",
-    dateLabel:"Sat, 26 Apr · 12:00–22:00",
-    start:"2026-04-26T12:00", end:"2026-04-26T22:00",
+    dateLabel:"Sat, 14 Mar · 12:00–22:00",
+    start:"2026-03-14T12:00", end:"2026-03-14T22:00",
     area:"Newtown, Johannesburg",
     location:"Newtown Junction", address:"Newtown Junction\nJohannesburg",
     latitude:-26.2030, longitude:28.0350,
     phone:"+27 11 838 5678", website:"craftbeersa.co.za",
-    img:"https://images.unsplash.com/photo-1575037614876-c38a4c44f5be?w=800&q=80",
+    img:"https://picsum.photos/seed/beer10/800/500",
     desc:"80+ craft beers from across SA. Live music all day, food trucks, and a home-brewing competition. 18+ only.",
   },
   {
     id:"11", title:"Cape Town Jazz Festival", organiser:"CTIJF",
     category:"Event",
-    dateLabel:"Fri, 25 Apr · 17:00–00:00",
-    start:"2026-04-25T17:00", end:"2026-04-25T23:59",
+    dateLabel:"Fri, 27 Mar · 17:00–00:00",
+    start:"2026-03-27T17:00", end:"2026-03-28T00:00",
     area:"Cape Town CBD",
     location:"CTICC & Artscape", address:"Convention Square\nCape Town",
     latitude:-33.9180, longitude:18.4220,
     phone:"+27 21 671 0506", website:"capetownjazzfest.com",
-    img:"https://images.unsplash.com/photo-1511192336445-4881d31a0e06?w=800&q=80",
+    img:"https://picsum.photos/seed/jazz11/800/500",
     desc:"Africa's Grand Jazz Festival returns. Two stages, 40+ artists, world-class performances and the magic of Cape Town at night.",
   },
   {
     id:"12", title:"Soweto Wine & Lifestyle Festival", organiser:"SWF",
     category:"Event",
-    dateLabel:"Sun, 27 Apr · 11:00–21:00",
-    start:"2026-04-27T11:00", end:"2026-04-27T21:00",
+    dateLabel:"Sat, 28 Mar · 11:00–21:00",
+    start:"2026-03-28T11:00", end:"2026-03-28T21:00",
     area:"Soweto, Johannesburg",
     location:"Ubuntu Kraal Brewery", address:"Vilakazi St\nOrlando West, Soweto",
     latitude:-26.2450, longitude:27.9100,
     phone:"+27 11 936 3116", instagram:"@sowetowinefest",
-    img:"https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800&q=80",
+    img:"https://picsum.photos/seed/wine12/800/500",
     desc:"The ultimate celebration of SA wine culture, food and music in the heart of Soweto. Wine tastings, gourmet street food and live performances.",
-  },
-  {
-    id:"13", title:"Hermanus Whale Festival", organiser:"Hermanus Tourism",
-    category:"Event",
-    dateLabel:"Fri, 18 Apr · 09:00–18:00",
-    start:"2026-04-18T09:00", end:"2026-04-20T18:00",
-    area:"Hermanus, Western Cape",
-    location:"Hermanus New Harbour",
-    address:"New Harbour, Hermanus\nWestern Cape",
-    latitude:-34.4200, longitude:19.2400,
-    phone:"+27 28 313 1000", website:"whalefestival.co.za",
-    img:"https://images.unsplash.com/photo-1568430462989-44163eb1752f?w=800&q=80",
-    desc:"Celebrate the return of the southern right whales to Walker Bay. Street parades, live music, wine tastings, and whale watching boat tours.",
-  },
-  {
-    id:"14", title:"Stellenbosch Wine & Food Festival", organiser:"Stellenbosch 360",
-    category:"Fun",
-    dateLabel:"Sat, 19 Apr · 11:00–20:00",
-    start:"2026-04-19T11:00", end:"2026-04-19T20:00",
-    area:"Stellenbosch, Western Cape",
-    location:"Die Braak",
-    address:"Die Braak, Stellenbosch\nWestern Cape",
-    latitude:-33.9350, longitude:18.8600,
-    phone:"+27 21 886 4310", website:"stellenbosch360.co.za",
-    img:"https://images.unsplash.com/photo-1516594915697-87eb3b1c14ea?w=800&q=80",
-    desc:"Experience the best of Stellenbosch wine and cuisine. Over 30 wine estates showcasing their vintages paired with gourmet food from local chefs.",
-  },
-  {
-    id:"15", title:"Cape Town Carnival", organiser:"Cape Town Carnival Trust",
-    category:"Fun",
-    dateLabel:"Sat, 26 Apr · 16:00–23:00",
-    start:"2026-04-26T16:00", end:"2026-04-26T23:00",
-    area:"Green Point, Cape Town",
-    location:"Fan Walk, Green Point",
-    address:"Fan Walk, Somerset Rd\nGreen Point, Cape Town",
-    latitude:-33.9000, longitude:18.4000,
-    phone:"+27 21 487 5600", website:"capetowncarnival.com",
-    img:"https://images.unsplash.com/photo-1533174072545-7a4bc6b5a6d8?w=800&q=80",
-    desc:"A spectacular celebration of Cape Town's creativity and diversity. Floats, dancers, musicians, and performers light up the streets in a vibrant procession.",
   },
 ];
 
@@ -279,15 +239,15 @@ const SIco = ({n,s,c}) => <Ico n={n} s={s} c={c}/>;
 /* ─────────────────────────────────────────────────────────────
    LOCATION MODAL  (bottom sheet) - with Google Places autocomplete
 ───────────────────────────────────────────────────────────── */
-const LocationModal = ({open,onAllow,onManual,onSkip,setManualLocation}) => {
+const LocationModal = ({open,onAllow,onManual,onSkip}) => {
   const [showM,setShowM]=useState(false);
   const [manual,setManual]=useState("");
   const [selectedLocation,setSelectedLocation]=useState(null);
   const [isGeocoding,setIsGeocoding]=useState(false);
   const [geocodeError,setGeocodeError]=useState(null);
 
-  // Import location search hook - pass setManualLocation so selecting updates the app state
-  const { query, setQuery, predictions, loading: searchLoading, error: searchError, selectPrediction } = useLocationSearch(setManualLocation);
+  // Import location search hook
+  const { query, setQuery, predictions, loading: searchLoading, error: searchError, selectPrediction } = useLocationSearch();
 
   // Reset state when modal opens
   useEffect(()=>{
@@ -718,12 +678,9 @@ const EventsScreen = ({events,user,locLabel,radiusKm,onRadiusChange,onEventClick
       <div style={{background:BG,padding:"16px 16px 0",position:"sticky",top:0,zIndex:10}}>
         {/* Title */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
-          <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-            <h1 style={{fontFamily:FONT,fontSize:36,fontWeight:900,color:BLACK,lineHeight:1.05,letterSpacing:"-0.5px"}}>
-              What's<br/>happening?
-            </h1>
-            <span style={{background:ORANGE,color:WHITE,fontSize:10,fontWeight:700,padding:"2px 6px",borderRadius:4,fontFamily:FONT,marginTop:4}}>LIVE</span>
-          </div>
+          <h1 style={{fontFamily:FONT,fontSize:36,fontWeight:900,color:BLACK,lineHeight:1.05,letterSpacing:"-0.5px"}}>
+            What's<br/>happening?
+          </h1>
           <button style={{background:"none",border:"none",cursor:"pointer",padding:4,marginTop:6}}>
             <Ico n="search" s={22} c={BLACK}/>
           </button>
@@ -903,573 +860,47 @@ const EventsScreen = ({events,user,locLabel,radiusKm,onRadiusChange,onEventClick
 };
 
 /* ─────────────────────────────────────────────────────────────
-   HUB SCREEN - Split by User Role
-   Customer: Browse, saved events, location settings
-   Business: Business info, events dashboard, subscriptions
+   HUB SCREEN
 ───────────────────────────────────────────────────────────── */
-const MenuItem=({icon,label,sub,badge,onClick})=>{
-  const [hov,setHov]=useState(false);
-  return (
-    <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      style={{display:"flex",alignItems:"center",gap:14,padding:"15px 16px",background:hov?GRAY3:WHITE,borderRadius:16,marginBottom:10,cursor:"pointer",transition:"background .15s"}}>
-      <div style={{width:42,height:42,background:GRAY3,borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-        <Ico n={icon} s={19} c={BLACK}/>
-      </div>
-      <div style={{flex:1}}>
-        <p style={{fontFamily:FONT,fontSize:15,fontWeight:700,color:BLACK,marginBottom:2}}>{label}</p>
-        {sub&&<p style={{fontFamily:FONT,fontSize:12,color:GRAY1}}>{sub}</p>}
-      </div>
-      {badge&&<span style={{background:ORANGE+"22",color:ORANGE,borderRadius:999,fontSize:11,fontWeight:700,padding:"3px 10px",fontFamily:FONT}}>{badge}</span>}
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GRAY1} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+const HubScreen = ({user,events,onCreateEvent,onMyEvents,onSignIn}) => {
+  if (!user) return (
+    <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:BG}}>
+      <div style={{fontSize:52,marginBottom:20}}>🏪</div>
+      <h2 style={{fontFamily:FONT,fontSize:22,fontWeight:800,color:BLACK,marginBottom:8,textAlign:"center"}}>Your business account</h2>
+      <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,textAlign:"center",lineHeight:1.65,marginBottom:32,maxWidth:260}}>Sign in to create events and reach local audiences.</p>
+      <button onClick={onSignIn} style={{background:BLACK,color:WHITE,border:"none",borderRadius:999,padding:"14px 36px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>Sign in</button>
     </div>
   );
-};
 
-// CUSTOMER ACCOUNT VIEW
-const CustomerAccountView = ({user, onSettings, onSignOut}) => {
-  const [showConfirmSignOut, setShowConfirmSignOut] = useState(false);
+  const myPub=events.filter(e=>e.businessId===user.id&&e.status==="published");
 
-  return (
-    <div style={{flex:1,overflowY:"auto",background:BG,padding:"16px 16px 80px"}}>
-      {/* Header */}
-      <div style={{marginBottom:24}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-          <div>
-            <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,textTransform:"uppercase",letterSpacing:0.5,fontWeight:600,marginBottom:4}}>Customer Account</p>
-            <h1 style={{fontFamily:FONT,fontSize:26,fontWeight:900,color:BLACK,marginBottom:2}}>{user.user_metadata?.name || user.email?.split('@')[0] || 'My Account'}</h1>
-            <p style={{fontFamily:FONT,fontSize:14,color:GRAY1}}>{user.email}</p>
-          </div>
-          <button
-            onClick={onSettings}
-            style={{
-              width:40,
-              height:40,
-              borderRadius:12,
-              background:WHITE,
-              border:`1px solid ${GRAY2}`,
-              display:"flex",
-              alignItems:"center",
-              justifyContent:"center",
-              cursor:"pointer"
-            }}
-          >
-            <Ico n="settings" s={18} c={BLACK}/>
-          </button>
-        </div>
-      </div>
-
-      {/* Customer Menu Items */}
-      <MenuItem
-        icon="heart"
-        label="Saved Events"
-        sub="Events you've bookmarked"
-        onClick={()=>{/* TODO: Show saved events */}}
-      />
-      <MenuItem
-        icon="pin"
-        label="Location Settings"
-        sub="Manage your location preferences"
-        onClick={()=>{/* TODO: Show location settings */}}
-      />
-      <MenuItem
-        icon="user"
-        label="Profile"
-        sub="Update your name and preferences"
-        onClick={()=>{/* TODO: Show profile edit */}}
-      />
-
-      {/* Sign Out Section */}
-      <div style={{marginTop:32,paddingTop:24,borderTop:`1px solid ${GRAY2}`}}>
-        {!showConfirmSignOut ? (
-          <button
-            onClick={()=>setShowConfirmSignOut(true)}
-            style={{
-              width:"100%",
-              padding:"14px",
-              background:"transparent",
-              border:`1px solid ${GRAY2}`,
-              borderRadius:999,
-              color:BLACK,
-              fontFamily:FONT,
-              fontSize:14,
-              fontWeight:700,
-              cursor:"pointer"
-            }}
-          >
-            Sign Out
-          </button>
-        ) : (
-          <div style={{background:WHITE,borderRadius:16,padding:16,textAlign:"center"}}>
-            <p style={{fontFamily:FONT,fontSize:14,color:BLACK,marginBottom:12}}>Are you sure?</p>
-            <div style={{display:"flex",gap:10}}>
-              <button
-                onClick={onSignOut}
-                style={{
-                  flex:1,
-                  padding:"12px",
-                  background:BLACK,
-                  border:"none",
-                  borderRadius:999,
-                  color:WHITE,
-                  fontFamily:FONT,
-                  fontSize:14,
-                  fontWeight:700,
-                  cursor:"pointer"
-                }}
-              >
-                Yes, Sign Out
-              </button>
-              <button
-                onClick={()=>setShowConfirmSignOut(false)}
-                style={{
-                  flex:1,
-                  padding:"12px",
-                  background:"transparent",
-                  border:`1px solid ${GRAY2}`,
-                  borderRadius:999,
-                  color:BLACK,
-                  fontFamily:FONT,
-                  fontSize:14,
-                  fontWeight:700,
-                  cursor:"pointer"
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// BUSINESS ACCOUNT VIEW
-const BusinessAccountView = ({user, business, events, onCreateEvent, onMyEvents, onSettings, onSignOut}) => {
-  const [showConfirmSignOut, setShowConfirmSignOut] = useState(false);
-  const myEvents = events.filter(e=>e.businessId===user.id);
-  const liveEvents = myEvents.filter(e=>e.status==="published");
-
-  return (
-    <div style={{flex:1,overflowY:"auto",background:BG,padding:"16px 16px 80px"}}>
-      {/* Header */}
-      <div style={{marginBottom:24}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-          <div>
-            <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,textTransform:"uppercase",letterSpacing:0.5,fontWeight:600,marginBottom:4}}>Business Account</p>
-            <h1 style={{fontFamily:FONT,fontSize:26,fontWeight:900,color:BLACK,marginBottom:2}}>{business?.name || user.user_metadata?.business_name || 'My Business'}</h1>
-            <p style={{fontFamily:FONT,fontSize:14,color:GRAY1}}>{user.email}</p>
-          </div>
-          <button
-            onClick={onSettings}
-            style={{
-              width:40,
-              height:40,
-              borderRadius:12,
-              background:WHITE,
-              border:`1px solid ${GRAY2}`,
-              display:"flex",
-              alignItems:"center",
-              justifyContent:"center",
-              cursor:"pointer"
-            }}
-          >
-            <Ico n="settings" s={18} c={BLACK}/>
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Dashboard */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:24}}>
-        <div style={{background:WHITE,borderRadius:16,padding:16}}>
-          <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,marginBottom:4}}>Live Events</p>
-          <p style={{fontFamily:FONT,fontSize:24,fontWeight:800,color:BLACK}}>{liveEvents.length}</p>
-        </div>
-        <div style={{background:WHITE,borderRadius:16,padding:16}}>
-          <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,marginBottom:4}}>Total Events</p>
-          <p style={{fontFamily:FONT,fontSize:24,fontWeight:800,color:BLACK}}>{myEvents.length}</p>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div style={{background:BLACK,borderRadius:16,padding:20,marginBottom:24}}>
-        <h3 style={{fontFamily:FONT,fontSize:16,fontWeight:700,color:WHITE,marginBottom:4}}>Post an Event</h3>
-        <p style={{fontFamily:FONT,fontSize:13,color:"#888",marginBottom:16}}>Reach local customers for free</p>
-        <button
-          onClick={onCreateEvent}
-          style={{
-            width:"100%",
-            padding:"14px",
-            background:ORANGE,
-            border:"none",
-            borderRadius:999,
-            color:WHITE,
-            fontFamily:FONT,
-            fontSize:14,
-            fontWeight:700,
-            cursor:"pointer"
-          }}
-        >
-          + Create Event
-        </button>
-      </div>
-
-      {/* Business Menu Items */}
-      <MenuItem
-        icon="evtab"
-        label="Events Dashboard"
-        sub="Manage your events"
-        badge={liveEvents.length > 0 ? `${liveEvents.length} live` : null}
-        onClick={onMyEvents}
-      />
-      <MenuItem
-        icon="info"
-        label="Subscription"
-        sub="Free plan - upgrade anytime"
-        onClick={()=>{/* TODO: Show subscription */}}
-      />
-      <MenuItem
-        icon="user"
-        label="Business Profile"
-        sub="Edit business details"
-        onClick={()=>{/* TODO: Show business profile */}}
-      />
-
-      {/* Sign Out Section */}
-      <div style={{marginTop:32,paddingTop:24,borderTop:`1px solid ${GRAY2}`}}>
-        {!showConfirmSignOut ? (
-          <button
-            onClick={()=>setShowConfirmSignOut(true)}
-            style={{
-              width:"100%",
-              padding:"14px",
-              background:"transparent",
-              border:`1px solid ${GRAY2}`,
-              borderRadius:999,
-              color:BLACK,
-              fontFamily:FONT,
-              fontSize:14,
-              fontWeight:700,
-              cursor:"pointer"
-            }}
-          >
-            Sign Out
-          </button>
-        ) : (
-          <div style={{background:WHITE,borderRadius:16,padding:16,textAlign:"center"}}>
-            <p style={{fontFamily:FONT,fontSize:14,color:BLACK,marginBottom:12}}>Are you sure?</p>
-            <div style={{display:"flex",gap:10}}>
-              <button
-                onClick={onSignOut}
-                style={{
-                  flex:1,
-                  padding:"12px",
-                  background:BLACK,
-                  border:"none",
-                  borderRadius:999,
-                  color:WHITE,
-                  fontFamily:FONT,
-                  fontSize:14,
-                  fontWeight:700,
-                  cursor:"pointer"
-                }}
-              >
-                Yes, Sign Out
-              </button>
-              <button
-                onClick={()=>setShowConfirmSignOut(false)}
-                style={{
-                  flex:1,
-                  padding:"12px",
-                  background:"transparent",
-                  border:`1px solid ${GRAY2}`,
-                  borderRadius:999,
-                  color:BLACK,
-                  fontFamily:FONT,
-                  fontSize:14,
-                  fontWeight:700,
-                  cursor:"pointer"
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Main Hub Screen - routes to appropriate view
-const HubScreen = ({user, profile, role, business, events, onCreateEvent, onMyEvents, onSignIn, onSettings, onSignOut, onRefreshProfile, authLoading}) => {
-  const [retrying, setRetrying] = useState(false);
-
-  // Not logged in - show sign in prompt
-  if (!user) {
+  const MenuItem=({icon,label,sub,badge,onClick})=>{
+    const [hov,setHov]=useState(false);
     return (
-      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:BG}}>
-        <div style={{fontSize:52,marginBottom:20}}>👤</div>
-        <h2 style={{fontFamily:FONT,fontSize:22,fontWeight:800,color:BLACK,marginBottom:8,textAlign:"center"}}>Your Account</h2>
-        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,textAlign:"center",lineHeight:1.65,marginBottom:32,maxWidth:260}}>Sign in to save events, get personalized recommendations, and more.</p>
-        <button onClick={onSignIn} style={{background:BLACK,color:WHITE,border:"none",borderRadius:999,padding:"14px 36px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>Sign in</button>
+      <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+        style={{display:"flex",alignItems:"center",gap:14,padding:"15px 16px",background:hov?GRAY3:WHITE,borderRadius:16,marginBottom:10,cursor:"pointer",transition:"background .15s"}}>
+        <div style={{width:42,height:42,background:GRAY3,borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          <Ico n={icon} s={19} c={BLACK}/>
+        </div>
+        <div style={{flex:1}}>
+          <p style={{fontFamily:FONT,fontSize:15,fontWeight:700,color:BLACK,marginBottom:2}}>{label}</p>
+          {sub&&<p style={{fontFamily:FONT,fontSize:12,color:GRAY1}}>{sub}</p>}
+        </div>
+        {badge&&<span style={{background:ORANGE+"22",color:ORANGE,borderRadius:999,fontSize:11,fontWeight:700,padding:"3px 10px",fontFamily:FONT}}>{badge}</span>}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GRAY1} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     );
-  }
-
-  // Profile failed to load - show recovery UI
-  if (!profile && !authLoading) {
-    return (
-      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:BG}}>
-        <div style={{fontSize:48,marginBottom:16}}>⚠️</div>
-        <h2 style={{fontFamily:FONT,fontSize:20,fontWeight:800,color:BLACK,marginBottom:8,textAlign:"center"}}>Account Data Not Loaded</h2>
-        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,textAlign:"center",lineHeight:1.65,marginBottom:24,maxWidth:280}}>We couldn't load your account details. This might be a temporary connection issue.</p>
-        <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:260}}>
-          <button
-            onClick={async ()=>{
-              setRetrying(true);
-              await onRefreshProfile();
-              setRetrying(false);
-            }}
-            disabled={retrying}
-            style={{
-              background:BLACK,
-              color:WHITE,
-              border:"none",
-              borderRadius:999,
-              padding:"14px 24px",
-              fontSize:15,
-              fontWeight:700,
-              cursor:retrying?"not-allowed":"pointer",
-              fontFamily:FONT,
-              opacity:retrying?0.7:1
-            }}
-          >
-            {retrying?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><LoadingSpinner size={16}/>Retrying...</span>:"Try Again"}
-          </button>
-          <button
-            onClick={onSignOut}
-            style={{
-              background:"transparent",
-              color:GRAY1,
-              border:`1px solid ${GRAY2}`,
-              borderRadius:999,
-              padding:"12px 24px",
-              fontSize:14,
-              fontWeight:600,
-              cursor:"pointer",
-              fontFamily:FONT
-            }}
-          >
-            Sign Out & Start Over
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show appropriate view based on role
-  if (role === "business") {
-    return (
-      <BusinessAccountView
-        user={user}
-        business={business}
-        events={events}
-        onCreateEvent={onCreateEvent}
-        onMyEvents={onMyEvents}
-        onSettings={onSettings}
-        onSignOut={onSignOut}
-      />
-    );
-  }
-
-  // Default to customer view
-  return (
-    <CustomerAccountView
-      user={user}
-      onSettings={onSettings}
-      onSignOut={onSignOut}
-    />
-  );
-};
-
-/* ─────────────────────────────────────────────────────────────
-   SETTINGS MODAL - Role switching and account settings
-───────────────────────────────────────────────────────────── */
-const SettingsModal = ({open, onClose, user, role, onRoleChange, onSignOut}) => {
-  const [showRoleConfirm, setShowRoleConfirm] = useState(false);
-  const [newRole, setNewRole] = useState(null);
-
-  if (!open) return null;
-
-  const handleRoleClick = (role) => {
-    if (role === role) return; // Already this role
-    setNewRole(role);
-    setShowRoleConfirm(true);
-  };
-
-  const confirmRoleChange = async () => {
-    await onRoleChange(newRole);
-    setShowRoleConfirm(false);
-    onClose();
   };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 100,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-end"
-      }}
-      onClick={e=>e.target===e.currentTarget&&onClose()}
-    >
-      <div style={{background:WHITE,borderRadius:"22px 22px 0 0",padding:"28px 20px 44px",maxHeight:"90vh",overflowY:"auto"}}>
-        {/* Header */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-          <h2 style={{fontFamily:FONT,fontSize:22,fontWeight:800,color:BLACK}}>Settings</h2>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:24,cursor:"pointer",color:GRAY1}}>×</button>
-        </div>
-
-        {!showRoleConfirm ? (
-          <>
-            {/* Account Type Section */}
-            <div style={{marginBottom:32}}>
-              <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,textTransform:"uppercase",letterSpacing:0.5,fontWeight:600,marginBottom:12}}>Account Type</p>
-
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {/* Customer Option */}
-                <button
-                  onClick={()=>handleRoleClick("customer")}
-                  style={{
-                    display:"flex",
-                    alignItems:"center",
-                    gap:12,
-                    padding:"16px",
-                    background:role==="customer"?"#FFF7ED":WHITE,
-                    border:`2px solid ${role==="customer"?ORANGE:GRAY2}`,
-                    borderRadius:12,
-                    cursor:"pointer",
-                    textAlign:"left"
-                  }}
-                >
-                  <div style={{fontSize:24}}>👤</div>
-                  <div style={{flex:1}}>
-                    <p style={{fontFamily:FONT,fontSize:15,fontWeight:700,color:BLACK,marginBottom:2}}>Customer</p>
-                    <p style={{fontFamily:FONT,fontSize:12,color:GRAY1}}>Browse and save events</p>
-                  </div>
-                  {role==="customer"&&<div style={{color:ORANGE,fontWeight:700}}>✓</div>}
-                </button>
-
-                {/* Business Option */}
-                <button
-                  onClick={()=>handleRoleClick("business")}
-                  style={{
-                    display:"flex",
-                    alignItems:"center",
-                    gap:12,
-                    padding:"16px",
-                    background:role==="business"?"#FFF7ED":WHITE,
-                    border:`2px solid ${role==="business"?ORANGE:GRAY2}`,
-                    borderRadius:12,
-                    cursor:"pointer",
-                    textAlign:"left"
-                  }}
-                >
-                  <div style={{fontSize:24}}>🏢</div>
-                  <div style={{flex:1}}>
-                    <p style={{fontFamily:FONT,fontSize:15,fontWeight:700,color:BLACK,marginBottom:2}}>Business</p>
-                    <p style={{fontFamily:FONT,fontSize:12,color:GRAY1}}>Publish events and reach customers</p>
-                  </div>
-                  {role==="business"&&<div style={{color:ORANGE,fontWeight:700}}>✓</div>}
-                </button>
-              </div>
-            </div>
-
-            {/* Account Info */}
-            <div style={{marginBottom:24}}>
-              <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,textTransform:"uppercase",letterSpacing:0.5,fontWeight:600,marginBottom:12}}>Account</p>
-
-              <div style={{background:GRAY3,borderRadius:12,padding:16}}>
-                <p style={{fontFamily:FONT,fontSize:13,color:GRAY1,marginBottom:4}}>Email</p>
-                <p style={{fontFamily:FONT,fontSize:15,color:BLACK,fontWeight:600}}>{user?.email}</p>
-              </div>
-            </div>
-
-            {/* Sign Out */}
-            <button
-              onClick={()=>{onClose();onSignOut();}}
-              style={{
-                width:"100%",
-                padding:"16px",
-                background:"transparent",
-                border:`1px solid ${GRAY2}`,
-                borderRadius:999,
-                color:BLACK,
-                fontFamily:FONT,
-                fontSize:14,
-                fontWeight:700,
-                cursor:"pointer"
-              }}
-            >
-              Sign Out
-            </button>
-          </>
-        ) : (
-          <>
-            {/* Role Change Confirmation */}
-            <div style={{textAlign:"center",padding:"20px 0"}}>
-              <div style={{fontSize:48,marginBottom:16}}>{newRole==="business"?"🏢":"👤"}</div>
-              <h3 style={{fontFamily:FONT,fontSize:18,fontWeight:800,color:BLACK,marginBottom:8}}>Switch to {newRole==="business"?"Business":"Customer"}?</h3>
-              <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,lineHeight:1.6,marginBottom:24}}>
-                {newRole==="business"
-                  ? "You'll be able to create and manage events. Your account will have business features."
-                  : "You'll be able to browse and save events. Switch back anytime to post events."}
-              </p>
-
-              <div style={{display:"flex",gap:10}}>
-                <button
-                  onClick={confirmRoleChange}
-                  style={{
-                    flex:1,
-                    padding:"14px",
-                    background:BLACK,
-                    border:"none",
-                    borderRadius:999,
-                    color:WHITE,
-                    fontFamily:FONT,
-                    fontSize:14,
-                    fontWeight:700,
-                    cursor:"pointer"
-                  }}
-                >
-                  Switch to {newRole==="business"?"Business":"Customer"}
-                </button>
-                <button
-                  onClick={()=>setShowRoleConfirm(false)}
-                  style={{
-                    flex:1,
-                    padding:"14px",
-                    background:"transparent",
-                    border:`1px solid ${GRAY2}`,
-                    borderRadius:999,
-                    color:BLACK,
-                    fontFamily:FONT,
-                    fontSize:14,
-                    fontWeight:700,
-                    cursor:"pointer"
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </>
-        )}
+    <div style={{flex:1,overflowY:"auto",background:BG,padding:"16px 16px 80px"}}>
+      <div style={{marginBottom:24}}>
+        <h1 style={{fontFamily:FONT,fontSize:30,fontWeight:900,color:BLACK,marginBottom:4}}>Account</h1>
+        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1}}>{user.name}</p>
       </div>
+
+      <MenuItem icon="plus"  label="Create event"  sub="Publish your event for free" onClick={onCreateEvent}/>
+      <MenuItem icon="evtab" label="My Events"      sub="Drafts, published and past" badge={myPub.length>0?`${myPub.length} live`:null} onClick={onMyEvents}/>
     </div>
   );
 };
@@ -1513,164 +944,49 @@ const AboutScreen = ({onSignUp}) => (
 /* ─────────────────────────────────────────────────────────────
    AUTH MODAL  (bottom sheet) - Real Supabase Auth
 ───────────────────────────────────────────────────────────── */
-// Input component for AuthModal - defined outside to prevent re-mounting
-const AuthInput=({value,onChange,placeholder,type="text",name,autoComplete,error,onBlur:onBlurProp,onFocus:onFocusProp})=>{
-  const [isFocused,setIsFocused]=useState(false);
-  const hasError=!!error;
-  return (
-    <div style={{marginBottom:hasError?4:12}}>
-      <input
-        value={value}
-        onChange={onChange}
-        type={type}
-        placeholder={placeholder}
-        name={name}
-        autoComplete={autoComplete}
-        style={{
-          width:"100%",
-          border:`1.5px solid ${hasError?"#EF4444":isFocused?BLACK:GRAY2}`,
-          borderRadius:14,
-          padding:"13px 15px",
-          fontSize:15,
-          outline:"none",
-          background:hasError?"#FEF2F2":GRAY3,
-          fontFamily:FONT,
-          boxSizing:"border-box",
-          transition:"border-color 0.15s ease, background 0.15s ease"
-        }}
-        onFocus={(e)=>{setIsFocused(true); onFocusProp?.(e);}}
-        onBlur={(e)=>{setIsFocused(false); onBlurProp?.(e);}}
-      />
-      {hasError&&(
-        <p style={{fontFamily:FONT,fontSize:12,color:"#EF4444",margin:"6px 0 8px"}}>{error}</p>
-      )}
-    </div>
-  );
-};
-
 const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError}) => {
   const [mode,setMode]=useState("login");
-  const [email,setEmail]=useState("");
-  const [pass,setPass]=useState("");
-  const [name,setName]=useState("");
-  const [userType,setUserType]=useState(null); // null until explicitly selected
+  const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [name,setName]=useState("");
   const [loading,setLoading]=useState(false);
   const [localError,setLocalError]=useState(null);
-  const [showPasswordHint,setShowPasswordHint]=useState(false);
-  const [fieldErrors,setFieldErrors]=useState({}); // Per-field validation errors
-  const [touched,setTouched]=useState({}); // Track which fields were touched
 
   // Clear errors when modal opens/closes or mode changes
   useEffect(()=>{
     setLocalError(null);
-    setShowPasswordHint(false);
-    setFieldErrors({});
-    setTouched({});
     if(clearError) clearError();
   },[open,mode,clearError]);
 
-  // Reset name and userType when switching modes
-  useEffect(()=>{
-    if(mode==="login"){
-      setName("");
-      setUserType(null);
-    }
-  },[mode]);
-
   if (!open) return null;
 
-  // Validate individual fields and return specific errors
-  const validateFields=()=>{
-    const errors={};
-
-    if(!email.trim()){
-      errors.email="Email address is required";
-    }else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-      errors.email="Please enter a valid email address (e.g., name@example.com)";
-    }
-
-    if(!pass){
-      errors.password="Password is required";
-    }else if(mode==="register"){
-      if(pass.length<8){
-        errors.password="Password must be at least 8 characters";
-      }else if(!/[A-Z]/.test(pass)){
-        errors.password="Password must contain an uppercase letter";
-      }else if(!/[a-z]/.test(pass)){
-        errors.password="Password must contain a lowercase letter";
-      }else if(!/[0-9]/.test(pass)){
-        errors.password="Password must contain a number";
-      }
-    }
-
-    if(mode==="register"){
-      if(!userType){
-        errors.userType="Please select how you'll use Fomo";
-      }
-      if(!name.trim()){
-        errors.name=userType==="business"?"Business name is required":"Your name is required";
-      }else if(name.trim().length<2){
-        errors.name="Name must be at least 2 characters";
-      }else if(name.length>100){
-        errors.name="Name must be less than 100 characters";
-      }
-    }
-
-    return errors;
-  };
-
-  // Validate entire form and return summary error
-  const validateForm=()=>{
-    const errors=validateFields();
-    if(Object.keys(errors).length>0){
-      return Object.values(errors)[0]; // Return first error for banner
-    }
-    return null;
-  };
-
-  // Mark field as touched
-  const markTouched=(field)=>{
-    setTouched(prev=>({...prev,[field]:true}));
-  };
-
-  // Get real-time field error
-  const getFieldError=(field)=>{
-    if(!touched[field] && !Object.keys(fieldErrors).length) return null;
-    const errors=validateFields();
-    return errors[field]||null;
-  };
+  const Inp=({val,set,ph,t="text"})=>(
+    <input value={val} onChange={e=>set(e.target.value)} type={t} placeholder={ph}
+      style={{width:"100%",border:`1.5px solid ${GRAY2}`,borderRadius:14,padding:"13px 15px",fontSize:15,marginBottom:12,outline:"none",background:GRAY3,fontFamily:FONT,boxSizing:"border-box"}}
+      onFocus={e=>e.target.style.borderColor=BLACK} onBlur={e=>e.target.style.borderColor=GRAY2}/>
+  );
 
   const submit=async()=>{
     setLocalError(null);
-    setFieldErrors({});
     if(clearError) clearError();
 
-    // Validate all fields
-    const fieldValidationErrors=validateFields();
-    if(Object.keys(fieldValidationErrors).length>0){
-      setFieldErrors(fieldValidationErrors);
-      setTouched({email:true,password:true,name:true,userType:true});
-      setLocalError(Object.values(fieldValidationErrors)[0]);
+    // Validation
+    if(!email||!pass){
+      setLocalError("Please enter both email and password");
+      return;
+    }
+    if(mode==="register" && !name){
+      setLocalError("Please enter your business name");
       return;
     }
 
     setLoading(true);
     try{
       if(mode==="login"){
-        const result = await onLogin(email.trim(),pass);
-        if(!result.success){
-          setLocalError(result.error || "Login failed. Please check your credentials.");
-        }
+        await onLogin(email,pass);
       }else{
-        // Pass name for all users, and userType
-        const result = await onRegister(email.trim(),pass,name.trim(),userType);
-        if(!result.success){
-          setLocalError(result.error || "Registration failed. Please try again.");
-        }
+        await onRegister(email,pass,name);
       }
     }catch(err){
-      console.error("Auth error:",err);
-      setLocalError(err.message || "An unexpected error occurred. Please try again.");
+      // Error is handled by parent via authError
     }finally{
       setLoading(false);
     }
@@ -1679,276 +995,36 @@ const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError})
   const displayError = localError || authError;
 
   return (
-    <div style={{position:"fixed",inset:0,zIndex:100,background:"rgba(0,0,0,0.5)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}
+    <div style={{position:"absolute",inset:0,zIndex:90,background:"rgba(0,0,0,0.5)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:WHITE,borderRadius:"22px 22px 0 0",padding:"28px 20px 44px",animation:"slideUp .25s ease",maxHeight:"90vh",overflowY:"auto"}}>
-        {/* Header */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <h2 style={{fontFamily:FONT,fontSize:22,fontWeight:800,color:BLACK}}>{mode==="login"?"Welcome back":"Create account"}</h2>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:28,color:GRAY1,cursor:"pointer",lineHeight:1}}>×</button>
-        </div>
-        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,marginBottom:22}}>
-          {mode==="login"
-            ?"Sign in to your account"
-            :userType==="business"
-              ?"Create a business account to publish events"
-              :"Create an account to discover events"}
-        </p>
+      <div style={{background:WHITE,borderRadius:"22px 22px 0 0",padding:"28px 20px 44px",animation:"slideUp .25s ease"}}>
+        <h2 style={{fontFamily:FONT,fontSize:22,fontWeight:800,color:BLACK,marginBottom:6}}>{mode==="login"?"Welcome back":"Create account"}</h2>
+        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,marginBottom:22}}>{mode==="login"?"Sign in to your Account.":"Join to publish local events."}</p>
 
-        {/* Error Display */}
         {displayError&&(
           <div style={{background:"#FEE2E2",border:"1px solid #FECACA",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
             <p style={{fontFamily:FONT,fontSize:13,color:"#DC2626",margin:0}}>{displayError}</p>
           </div>
         )}
 
-        {/* Mode Toggle */}
-        <div style={{display:"flex",gap:8,marginBottom:20,padding:4,background:GRAY3,borderRadius:12}}>
-          <button
-            onClick={()=>setMode("login")}
-            style={{
-              flex:1,
-              padding:"10px",
-              borderRadius:8,
-              border:"none",
-              background:mode==="login"?WHITE:"transparent",
-              color:mode==="login"?BLACK:GRAY1,
-              fontFamily:FONT,
-              fontSize:14,
-              fontWeight:600,
-              cursor:"pointer",
-              boxShadow:mode==="login"?"0 1px 3px rgba(0,0,0,0.1)":"none"
-            }}
-          >Sign In</button>
-          <button
-            onClick={()=>setMode("register")}
-            style={{
-              flex:1,
-              padding:"10px",
-              borderRadius:8,
-              border:"none",
-              background:mode==="register"?WHITE:"transparent",
-              color:mode==="register"?BLACK:GRAY1,
-              fontFamily:FONT,
-              fontSize:14,
-              fontWeight:600,
-              cursor:"pointer",
-              boxShadow:mode==="register"?"0 1px 3px rgba(0,0,0,0.1)":"none"
-            }}
-          >Create Account</button>
-        </div>
+        {mode==="register"&&<Inp val={name} set={setName} ph="Business name"/>}
+        <Inp val={email} set={setEmail} ph="Email address" t="email"/>
+        <Inp val={pass}  set={setPass}  ph="Password"      t="password"/>
 
-        {/* Account Type Selector - only on register */}
-        {mode==="register"&&(
-          <div style={{marginBottom:18}}>
-            <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,marginBottom:8,fontWeight:500}}>I want to: <span style={{color:ORANGE}}>*</span></p>
-            <div style={{display:"flex",gap:10}}>
-              <button
-                onClick={()=>{setUserType("customer"); markTouched("userType");}}
-                type="button"
-                style={{
-                  flex:1,
-                  padding:"14px",
-                  borderRadius:12,
-                  border:`2px solid ${userType==="customer"?ORANGE:getFieldError("userType")?"#EF4444":GRAY2}`,
-                  background:userType==="customer"?"#FFF7ED":WHITE,
-                  cursor:"pointer",
-                  fontFamily:FONT,
-                  textAlign:"center"
-                }}
-              >
-                <div style={{fontSize:24,marginBottom:6}}>👤</div>
-                <div style={{fontSize:14,fontWeight:700,color:userType==="customer"?ORANGE:BLACK}}>Browse Events</div>
-                <div style={{fontSize:11,color:GRAY1,marginTop:2}}>I'm a customer</div>
-              </button>
-              <button
-                onClick={()=>{setUserType("business"); markTouched("userType");}}
-                type="button"
-                style={{
-                  flex:1,
-                  padding:"14px",
-                  borderRadius:12,
-                  border:`2px solid ${userType==="business"?ORANGE:getFieldError("userType")?"#EF4444":GRAY2}`,
-                  background:userType==="business"?"#FFF7ED":WHITE,
-                  cursor:"pointer",
-                  fontFamily:FONT,
-                  textAlign:"center"
-                }}
-              >
-                <div style={{fontSize:24,marginBottom:6}}>🏢</div>
-                <div style={{fontSize:14,fontWeight:700,color:userType==="business"?ORANGE:BLACK}}>Publish Events</div>
-                <div style={{fontSize:11,color:GRAY1,marginTop:2}}>I'm a business</div>
-              </button>
-            </div>
-            {getFieldError("userType")&&(
-              <p style={{fontFamily:FONT,fontSize:12,color:"#EF4444",marginTop:8}}>{getFieldError("userType")}</p>
-            )}
-          </div>
-        )}
-
-        {/* Name Field - Required for all registrations */}
-        {mode==="register"&&(
-          <AuthInput
-            value={name}
-            onChange={e=>setName(e.target.value)}
-            onBlur={()=>markTouched("name")}
-            error={getFieldError("name")}
-            placeholder={userType==="business"?"Business name *":"Your name *"}
-            name="name"
-            autoComplete="name"
-          />
-        )}
-
-        {/* Email Field */}
-        <AuthInput
-          value={email}
-          onChange={e=>setEmail(e.target.value)}
-          onBlur={()=>markTouched("email")}
-          error={getFieldError("email")}
-          placeholder="Email address *"
-          type="email"
-          name="email"
-          autoComplete="email"
-        />
-
-        {/* Password Field */}
-        <div style={{position:"relative"}}>
-          <AuthInput
-            value={pass}
-            onChange={e=>{
-              setPass(e.target.value);
-              if(mode==="register"&&e.target.value.length>0){
-                setShowPasswordHint(true);
-              }
-            }}
-            onBlur={()=>markTouched("password")}
-            error={getFieldError("password")}
-            onFocus={()=>mode==="register"&&pass.length===0&&setShowPasswordHint(true)}
-            placeholder="Password *"
-            type="password"
-            name="password"
-            autoComplete={mode==="login"?"current-password":"new-password"}
-          />
-        </div>
-
-        {/* Password Requirements Hint */}
-        {mode==="register"&&showPasswordHint&&(
-          <div style={{background:GRAY3,borderRadius:8,padding:"10px 14px",marginBottom:16}}>
-            <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,marginBottom:6}}>Password must have:</p>
-            <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              <span style={{fontFamily:FONT,fontSize:12,color:pass.length>=8?"#10B981":GRAY1}}>
-                {pass.length>=8?"✓":"○"} At least 8 characters
-              </span>
-              <span style={{fontFamily:FONT,fontSize:12,color:/[A-Z]/.test(pass)?"#10B981":GRAY1}}>
-                {/[A-Z]/.test(pass)?"✓":"○"} One uppercase letter
-              </span>
-              <span style={{fontFamily:FONT,fontSize:12,color:/[a-z]/.test(pass)?"#10B981":GRAY1}}>
-                {/[a-z]/.test(pass)?"✓":"○"} One lowercase letter
-              </span>
-              <span style={{fontFamily:FONT,fontSize:12,color:/[0-9]/.test(pass)?"#10B981":GRAY1}}>
-                {/[0-9]/.test(pass)?"✓":"○"} One number
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Submit Button */}
-        <button
-          onClick={submit}
-          disabled={loading}
-          style={{
-            width:"100%",
-            background:BLACK,
-            color:WHITE,
-            border:"none",
-            borderRadius:999,
-            padding:16,
-            fontSize:15,
-            fontWeight:700,
-            cursor:loading?"not-allowed":"pointer",
-            fontFamily:FONT,
-            marginBottom:16,
-            opacity:loading?0.6:1,
-            transition:"opacity 0.2s"
-          }}
-        >
-          {loading?(
-            <span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-              <LoadingSpinner size={18}/>
-              {mode==="login"?"Signing in...":"Creating account..."}
-            </span>
-          ):mode==="login"?"Sign in":"Create account"}
+        <button onClick={submit} disabled={loading}
+          style={{width:"100%",background:BLACK,color:WHITE,border:"none",borderRadius:999,padding:15,fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FONT,marginBottom:14,opacity:loading?.7:1}}>
+          {loading?"…":mode==="login"?"Sign in":"Create account"}
         </button>
+        <p style={{textAlign:"center",fontFamily:FONT,fontSize:13,color:GRAY1}}>
+          {mode==="login"?"No account? ":"Already have one? "}
+          <button onClick={()=>setMode(mode==="login"?"register":"login")}
+            style={{background:"none",border:"none",color:BLACK,fontWeight:700,cursor:"pointer",fontSize:13,fontFamily:FONT}}>
+            {mode==="login"?"Sign up":"Sign in"}
+          </button>
+        </p>
       </div>
     </div>
   );
-};
-
-/* ─────────────────────────────────────────────────────────────
-   FORM COMPONENTS (stable, prevents re-mounting)
-───────────────────────────────────────────────────────────── */
-const FormField=({value,onChange,type="text",placeholder})=>{
-  const [isFocused,setIsFocused]=useState(false);
-  return (
-    <input
-      value={value}
-      onChange={e=>onChange(e.target.value)}
-      type={type}
-      placeholder={placeholder}
-      style={{
-        width:"100%",
-        border:`1.5px solid ${isFocused?BLACK:GRAY2}`,
-        borderRadius:12,
-        padding:"12px 14px",
-        fontSize:14,
-        outline:"none",
-        background:GRAY3,
-        fontFamily:FONT,
-        marginBottom:18,
-        boxSizing:"border-box",
-        transition:"border-color 0.15s ease"
-      }}
-      onFocus={()=>setIsFocused(true)}
-      onBlur={()=>setIsFocused(false)}
-    />
-  );
-};
-
-const FormTextArea=({value,onChange,placeholder,rows=4})=>{
-  const [isFocused,setIsFocused]=useState(false);
-  return (
-    <textarea
-      value={value}
-      onChange={e=>onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={rows}
-      style={{
-        width:"100%",
-        border:`1.5px solid ${isFocused?BLACK:GRAY2}`,
-        borderRadius:12,
-        padding:"12px 14px",
-        fontSize:14,
-        outline:"none",
-        background:GRAY3,
-        fontFamily:FONT,
-        marginBottom:18,
-        boxSizing:"border-box",
-        resize:"vertical",
-        minHeight:80,
-        transition:"border-color 0.15s ease"
-      }}
-      onFocus={()=>setIsFocused(true)}
-      onBlur={()=>setIsFocused(false)}
-    />
-  );
-};
-
-// Category ID mapping for database (maps string IDs to database integer IDs)
-const CATEGORY_ID_MAP={
-  'business':1,'family':2,'kids':3,'food-drink':4,'music':5,'sport-fitness':6,
-  'community':7,'faith-christian':8,'nightlife':9,'other':10,'education':11,
-  'markets':12,'arts-culture':13,'workshops':14,'networking':15,'charity':16,
-  'outdoors':17,'wellness':18,'tech':19,'entertainment':20,'seasonal':21,'online':22
 };
 
 /* ─────────────────────────────────────────────────────────────
@@ -1966,15 +1042,11 @@ const CreateEvent = ({user,onSave,onBack}) => {
   };
 
   const Lbl=({c})=><label style={{fontFamily:FONT,fontSize:11,fontWeight:700,color:GRAY1,letterSpacing:"0.7px",textTransform:"uppercase",display:"block",marginBottom:6}}>{c}</label>;
-
-  // Memoized input component to prevent focus loss
-  const Inp=useCallback(({k,ph,t="text"})=>(
-    <FormField value={f[k]} onChange={v=>set(k,v)} type={t} placeholder={ph}/>
-  ),[f]);
-
-  const TextArea=useCallback(({k,ph,rows=4})=>(
-    <FormTextArea value={f[k]} onChange={v=>set(k,v)} placeholder={ph} rows={rows}/>
-  ),[f]);
+  const Inp=({k,ph,t="text"})=>(
+    <input value={f[k]} onChange={e=>set(k,e.target.value)} type={t} placeholder={ph}
+      style={{width:"100%",border:`1.5px solid ${GRAY2}`,borderRadius:12,padding:"12px 14px",fontSize:14,outline:"none",background:GRAY3,fontFamily:FONT,marginBottom:18,boxSizing:"border-box"}}
+      onFocus={e=>e.target.style.borderColor=BLACK} onBlur={e=>e.target.style.borderColor=GRAY2}/>
+  );
   return (
     <div style={{background:WHITE,height:"100%",overflowY:"auto"}}>
       <div style={{padding:"16px 16px 100px"}}>
@@ -1986,7 +1058,9 @@ const CreateEvent = ({user,onSave,onBack}) => {
         </div>
         <Lbl c="Event title *"/><Inp k="title" ph="e.g. Saturday Morning Market"/>
         <Lbl c="Description *"/>
-        <TextArea k="desc" ph="Tell people what to expect…" rows={4}/>
+        <textarea value={f.desc} onChange={e=>set("desc",e.target.value)} placeholder="Tell people what to expect…" rows={4}
+          style={{width:"100%",border:`1.5px solid ${GRAY2}`,borderRadius:12,padding:"12px 14px",fontSize:14,outline:"none",background:GRAY3,fontFamily:FONT,marginBottom:18,resize:"vertical",boxSizing:"border-box"}}
+          onFocus={e=>e.target.style.borderColor=BLACK} onBlur={e=>e.target.style.borderColor=GRAY2}/>
         <Lbl c="Category *"/>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
           {TOP_LEVEL_CATEGORIES.filter(c=>c.id!=="all").map(c=>(
@@ -2022,17 +1096,11 @@ const CreateEvent = ({user,onSave,onBack}) => {
         <Lbl c="Website"/><Inp k="web" ph="yoursite.co.za"/>
         <Lbl c="Instagram"/><Inp k="ig" ph="@yourbusiness"/>
         <div style={{display:"flex",gap:12}}>
-          <button onClick={()=>{
-            const categoryId=CATEGORY_ID_MAP[f.subCat]||CATEGORY_ID_MAP[f.cat]||12;
-            onSave({...f,categoryId,status:"draft"});
-          }}
+          <button onClick={()=>onSave({...f,status:"draft"})}
             style={{flex:1,background:GRAY3,color:BLACK,border:"none",borderRadius:999,padding:14,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
             Save draft
           </button>
-          <button onClick={()=>{
-            const categoryId=CATEGORY_ID_MAP[f.subCat]||CATEGORY_ID_MAP[f.cat]||12;
-            onSave({...f,categoryId,status:"published"});
-          }}
+          <button onClick={()=>onSave({...f,status:"published"})}
             style={{flex:2,background:BLACK,color:WHITE,border:"none",borderRadius:999,padding:14,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
             Publish event
           </button>
@@ -2142,24 +1210,21 @@ export default function App() {
   const [showAuth,setShowAuth]        = useState(false);
   const [showCreate,setShowCreate]    = useState(false);
   const [showMyEv,setShowMyEv]        = useState(false);
-  const [showSettings,setShowSettings]= useState(false);
-  const [showRoleSelect,setShowRoleSelect]= useState(false);
   // Supabase Auth hook
-  const { user, profile, business, loading: authLoading, error: authError, signUp, signIn, signOut, updateRole, refreshProfile, role, hasRole } = useAuth();
+  const { user, business, loading: authLoading, error: authError, signUp, signIn, signOut, refreshBusiness } = useAuth();
 
-  // Fetch events from Supabase on mount, merging with mock data
+  // Fetch events from Supabase on mount
   useEffect(() => {
     const loadEvents = async () => {
       setEventsLoading(true);
       const { data, error } = await fetchEvents();
-
       if (error) {
-        console.error('Failed to load events from database:', error);
-        // Use mock data as fallback
-        setEvents(EVENTS);
-      } else if (data && data.length > 0) {
+        console.error('Failed to load events:', error);
+        // Fallback to empty array on error
+        setEvents([]);
+      } else {
         // Transform Supabase data to match app format
-        const formattedEvents = data.map(event => ({
+        const formattedEvents = data?.map(event => ({
           id: event.id,
           title: event.title,
           organiser: event.organiser || '',
@@ -2182,12 +1247,8 @@ export default function App() {
           status: event.status,
           featured: event.featured,
           viewCount: event.view_count,
-        }));
+        })) || [];
         setEvents(formattedEvents);
-      } else {
-        // Database is empty - use mock data
-        console.log('No events in database, using mock data');
-        setEvents(EVENTS);
       }
       setEventsLoading(false);
     };
@@ -2208,9 +1269,9 @@ export default function App() {
     return result;
   },[signIn]);
 
-  // Handle register - now accepts userType
-  const handleRegister = useCallback(async(email,password,name,userType)=>{
-    const result = await signUp(email,password,name,userType);
+  // Handle register
+  const handleRegister = useCallback(async(email,password,name)=>{
+    const result = await signUp(email,password,name);
     if(result.success){
       setShowAuth(false);
       setTab("hub");
@@ -2223,23 +1284,6 @@ export default function App() {
     await signOut();
     setTab("events");
   },[signOut]);
-
-  // Handle role selection
-  const handleRoleSelect = useCallback(async(selectedRole) =>{
-    if (user) {
-      const result = await updateRole(selectedRole);
-      if (result.success) {
-        setShowRoleSelect(false);
-      }
-    }
-  },[user,updateRole]);
-
-  // Show role selection if user is logged in but has no role
-  useEffect(() => {
-    if (user && !hasRole && !authLoading) {
-      setShowRoleSelect(true);
-    }
-  }, [user, hasRole, authLoading]);
 
   const register = useCallback(async(name,email)=>{
     setUser({id:`u_${Date.now()}`,name,email,count:0});
@@ -2339,10 +1383,9 @@ export default function App() {
 
   // Build user object for components (combining auth user + business)
   const appUser = user?{
-    id: user.id,
-    name: profile?.name||business?.business_name||user.email?.split('@')[0],
+    id: business?.id||user.id,
+    name: business?.name||user.email?.split('@')[0],
     email: user.email,
-    role: profile?.role||role||'customer',
     count: business?.event_count||0,
   }:null;
 
@@ -2387,7 +1430,7 @@ export default function App() {
         {/* Tab screens */}
         <div style={{display:"flex",flexDirection:"column",height:"100%",paddingBottom:60}}>
           {tab==="events"&&<EventsScreen events={location?filterByRadius(sortByDistance(events),radiusKm):events} user={appUser} locLabel={locLabel||"All locations"} radiusKm={radiusKm} onRadiusChange={setRadiusKm} onEventClick={setSelected} onSignIn={()=>setShowAuth(true)} showAds={showAds} userLocation={location} eventsLoading={eventsLoading}/>}
-          {tab==="hub"   &&<HubScreen user={appUser} profile={profile} role={role} business={business} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)} onSettings={()=>setShowSettings(true)} onSignOut={handleSignOut} onRefreshProfile={refreshProfile} authLoading={authLoading}/>}
+          {tab==="hub"   &&<HubScreen user={appUser} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)}/>}
           {tab==="about" &&<AboutScreen onSignUp={()=>setShowAuth(true)}/>}
         </div>
 
@@ -2404,7 +1447,6 @@ export default function App() {
         {/* Modals */}
         <LocationModal
           open={showLoc&&tab==="events"&&!selectedEvent}
-          setManualLocation={setManualLocation}
           onAllow={async()=>{
             const pos = await requestLocation();
             if (pos) {
@@ -2434,24 +1476,6 @@ export default function App() {
           onRegister={handleRegister}
           error={authError}
           clearError={()=>{}}
-        />
-
-        {/* Role Selection - shown after signup if no role */}
-        {showRoleSelect && user && (
-          <RoleSelection
-            onSelect={handleRoleSelect}
-            onSkip={()=>setShowRoleSelect(false)}
-          />
-        )}
-
-        {/* Settings Modal */}
-        <SettingsModal
-          open={showSettings}
-          onClose={()=>setShowSettings(false)}
-          user={user}
-          role={role}
-          onRoleChange={updateRole}
-          onSignOut={handleSignOut}
         />
       </div>
     </div>
