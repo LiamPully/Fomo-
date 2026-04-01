@@ -1202,7 +1202,9 @@ const BusinessAccountView = ({user, business, events, onCreateEvent, onMyEvents,
 };
 
 // Main Hub Screen - routes to appropriate view
-const HubScreen = ({user, profile, role, business, events, onCreateEvent, onMyEvents, onSignIn, onSettings, onSignOut}) => {
+const HubScreen = ({user, profile, role, business, events, onCreateEvent, onMyEvents, onSignIn, onSettings, onSignOut, onRefreshProfile, authLoading}) => {
+  const [retrying, setRetrying] = useState(false);
+
   // Not logged in - show sign in prompt
   if (!user) {
     return (
@@ -1211,6 +1213,57 @@ const HubScreen = ({user, profile, role, business, events, onCreateEvent, onMyEv
         <h2 style={{fontFamily:FONT,fontSize:22,fontWeight:800,color:BLACK,marginBottom:8,textAlign:"center"}}>Your Account</h2>
         <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,textAlign:"center",lineHeight:1.65,marginBottom:32,maxWidth:260}}>Sign in to save events, get personalized recommendations, and more.</p>
         <button onClick={onSignIn} style={{background:BLACK,color:WHITE,border:"none",borderRadius:999,padding:"14px 36px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>Sign in</button>
+      </div>
+    );
+  }
+
+  // Profile failed to load - show recovery UI
+  if (!profile && !authLoading) {
+    return (
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:BG}}>
+        <div style={{fontSize:48,marginBottom:16}}>⚠️</div>
+        <h2 style={{fontFamily:FONT,fontSize:20,fontWeight:800,color:BLACK,marginBottom:8,textAlign:"center"}}>Account Data Not Loaded</h2>
+        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,textAlign:"center",lineHeight:1.65,marginBottom:24,maxWidth:280}}>We couldn't load your account details. This might be a temporary connection issue.</p>
+        <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:260}}>
+          <button
+            onClick={async ()=>{
+              setRetrying(true);
+              await onRefreshProfile();
+              setRetrying(false);
+            }}
+            disabled={retrying}
+            style={{
+              background:BLACK,
+              color:WHITE,
+              border:"none",
+              borderRadius:999,
+              padding:"14px 24px",
+              fontSize:15,
+              fontWeight:700,
+              cursor:retrying?"not-allowed":"pointer",
+              fontFamily:FONT,
+              opacity:retrying?0.7:1
+            }}
+          >
+            {retrying?<span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><LoadingSpinner size={16}/>Retrying...</span>:"Try Again"}
+          </button>
+          <button
+            onClick={onSignOut}
+            style={{
+              background:"transparent",
+              color:GRAY1,
+              border:`1px solid ${GRAY2}`,
+              borderRadius:999,
+              padding:"12px 24px",
+              fontSize:14,
+              fontWeight:600,
+              cursor:"pointer",
+              fontFamily:FONT
+            }}
+          >
+            Sign Out & Start Over
+          </button>
+        </div>
       </div>
     );
   }
@@ -1461,32 +1514,37 @@ const AboutScreen = ({onSignUp}) => (
    AUTH MODAL  (bottom sheet) - Real Supabase Auth
 ───────────────────────────────────────────────────────────── */
 // Input component for AuthModal - defined outside to prevent re-mounting
-const AuthInput=({value,onChange,placeholder,type="text",name,autoComplete})=>{
+const AuthInput=({value,onChange,placeholder,type="text",name,autoComplete,error,onBlur:onBlurProp,onFocus:onFocusProp})=>{
   const [isFocused,setIsFocused]=useState(false);
+  const hasError=!!error;
   return (
-    <input
-      value={value}
-      onChange={onChange}
-      type={type}
-      placeholder={placeholder}
-      name={name}
-      autoComplete={autoComplete}
-      style={{
-        width:"100%",
-        border:`1.5px solid ${isFocused?BLACK:GRAY2}`,
-        borderRadius:14,
-        padding:"13px 15px",
-        fontSize:15,
-        marginBottom:12,
-        outline:"none",
-        background:GRAY3,
-        fontFamily:FONT,
-        boxSizing:"border-box",
-        transition:"border-color 0.15s ease"
-      }}
-      onFocus={()=>setIsFocused(true)}
-      onBlur={()=>setIsFocused(false)}
-    />
+    <div style={{marginBottom:hasError?4:12}}>
+      <input
+        value={value}
+        onChange={onChange}
+        type={type}
+        placeholder={placeholder}
+        name={name}
+        autoComplete={autoComplete}
+        style={{
+          width:"100%",
+          border:`1.5px solid ${hasError?"#EF4444":isFocused?BLACK:GRAY2}`,
+          borderRadius:14,
+          padding:"13px 15px",
+          fontSize:15,
+          outline:"none",
+          background:hasError?"#FEF2F2":GRAY3,
+          fontFamily:FONT,
+          boxSizing:"border-box",
+          transition:"border-color 0.15s ease, background 0.15s ease"
+        }}
+        onFocus={(e)=>{setIsFocused(true); onFocusProp?.(e);}}
+        onBlur={(e)=>{setIsFocused(false); onBlurProp?.(e);}}
+      />
+      {hasError&&(
+        <p style={{fontFamily:FONT,fontSize:12,color:"#EF4444",margin:"6px 0 8px"}}>{error}</p>
+      )}
+    </div>
   );
 };
 
@@ -1495,67 +1553,104 @@ const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError})
   const [email,setEmail]=useState("");
   const [pass,setPass]=useState("");
   const [name,setName]=useState("");
-  const [userType,setUserType]=useState("customer"); // 'customer' or 'business'
+  const [userType,setUserType]=useState(null); // null until explicitly selected
   const [loading,setLoading]=useState(false);
   const [localError,setLocalError]=useState(null);
   const [showPasswordHint,setShowPasswordHint]=useState(false);
+  const [fieldErrors,setFieldErrors]=useState({}); // Per-field validation errors
+  const [touched,setTouched]=useState({}); // Track which fields were touched
 
   // Clear errors when modal opens/closes or mode changes
   useEffect(()=>{
     setLocalError(null);
     setShowPasswordHint(false);
+    setFieldErrors({});
+    setTouched({});
     if(clearError) clearError();
   },[open,mode,clearError]);
 
-  // Reset name when switching modes
+  // Reset name and userType when switching modes
   useEffect(()=>{
     if(mode==="login"){
       setName("");
+      setUserType(null);
     }
   },[mode]);
 
   if (!open) return null;
 
-  const validateForm=()=>{
+  // Validate individual fields and return specific errors
+  const validateFields=()=>{
+    const errors={};
+
     if(!email.trim()){
-      return "Please enter your email address";
+      errors.email="Email address is required";
+    }else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      errors.email="Please enter a valid email address (e.g., name@example.com)";
     }
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-      return "Please enter a valid email address";
-    }
+
     if(!pass){
-      return "Please enter a password";
-    }
-    if(mode==="register"){
+      errors.password="Password is required";
+    }else if(mode==="register"){
       if(pass.length<8){
-        return "Password must be at least 8 characters";
+        errors.password="Password must be at least 8 characters";
+      }else if(!/[A-Z]/.test(pass)){
+        errors.password="Password must contain an uppercase letter";
+      }else if(!/[a-z]/.test(pass)){
+        errors.password="Password must contain a lowercase letter";
+      }else if(!/[0-9]/.test(pass)){
+        errors.password="Password must contain a number";
       }
-      if(!/[A-Z]/.test(pass)){
-        return "Password must contain at least one uppercase letter";
-      }
-      if(!/[a-z]/.test(pass)){
-        return "Password must contain at least one lowercase letter";
-      }
-      if(!/[0-9]/.test(pass)){
-        return "Password must contain at least one number";
+    }
+
+    if(mode==="register"){
+      if(!userType){
+        errors.userType="Please select how you'll use Fomo";
       }
       if(!name.trim()){
-        return userType==="business"?"Please enter your business name":"Please enter your name";
+        errors.name=userType==="business"?"Business name is required":"Your name is required";
+      }else if(name.trim().length<2){
+        errors.name="Name must be at least 2 characters";
+      }else if(name.length>100){
+        errors.name="Name must be less than 100 characters";
       }
-      if(name.trim().length<2){
-        return "Name must be at least 2 characters";
-      }
+    }
+
+    return errors;
+  };
+
+  // Validate entire form and return summary error
+  const validateForm=()=>{
+    const errors=validateFields();
+    if(Object.keys(errors).length>0){
+      return Object.values(errors)[0]; // Return first error for banner
     }
     return null;
   };
 
+  // Mark field as touched
+  const markTouched=(field)=>{
+    setTouched(prev=>({...prev,[field]:true}));
+  };
+
+  // Get real-time field error
+  const getFieldError=(field)=>{
+    if(!touched[field] && !Object.keys(fieldErrors).length) return null;
+    const errors=validateFields();
+    return errors[field]||null;
+  };
+
   const submit=async()=>{
     setLocalError(null);
+    setFieldErrors({});
     if(clearError) clearError();
 
-    const validationError=validateForm();
-    if(validationError){
-      setLocalError(validationError);
+    // Validate all fields
+    const fieldValidationErrors=validateFields();
+    if(Object.keys(fieldValidationErrors).length>0){
+      setFieldErrors(fieldValidationErrors);
+      setTouched({email:true,password:true,name:true,userType:true});
+      setLocalError(Object.values(fieldValidationErrors)[0]);
       return;
     }
 
@@ -1646,16 +1741,16 @@ const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError})
         {/* Account Type Selector - only on register */}
         {mode==="register"&&(
           <div style={{marginBottom:18}}>
-            <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,marginBottom:8,fontWeight:500}}>I want to:</p>
+            <p style={{fontFamily:FONT,fontSize:12,color:GRAY1,marginBottom:8,fontWeight:500}}>I want to: <span style={{color:ORANGE}}>*</span></p>
             <div style={{display:"flex",gap:10}}>
               <button
-                onClick={()=>setUserType("customer")}
+                onClick={()=>{setUserType("customer"); markTouched("userType");}}
                 type="button"
                 style={{
                   flex:1,
                   padding:"14px",
                   borderRadius:12,
-                  border:`2px solid ${userType==="customer"?ORANGE:GRAY2}`,
+                  border:`2px solid ${userType==="customer"?ORANGE:getFieldError("userType")?"#EF4444":GRAY2}`,
                   background:userType==="customer"?"#FFF7ED":WHITE,
                   cursor:"pointer",
                   fontFamily:FONT,
@@ -1667,13 +1762,13 @@ const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError})
                 <div style={{fontSize:11,color:GRAY1,marginTop:2}}>I'm a customer</div>
               </button>
               <button
-                onClick={()=>setUserType("business")}
+                onClick={()=>{setUserType("business"); markTouched("userType");}}
                 type="button"
                 style={{
                   flex:1,
                   padding:"14px",
                   borderRadius:12,
-                  border:`2px solid ${userType==="business"?ORANGE:GRAY2}`,
+                  border:`2px solid ${userType==="business"?ORANGE:getFieldError("userType")?"#EF4444":GRAY2}`,
                   background:userType==="business"?"#FFF7ED":WHITE,
                   cursor:"pointer",
                   fontFamily:FONT,
@@ -1685,6 +1780,9 @@ const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError})
                 <div style={{fontSize:11,color:GRAY1,marginTop:2}}>I'm a business</div>
               </button>
             </div>
+            {getFieldError("userType")&&(
+              <p style={{fontFamily:FONT,fontSize:12,color:"#EF4444",marginTop:8}}>{getFieldError("userType")}</p>
+            )}
           </div>
         )}
 
@@ -1693,6 +1791,8 @@ const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError})
           <AuthInput
             value={name}
             onChange={e=>setName(e.target.value)}
+            onBlur={()=>markTouched("name")}
+            error={getFieldError("name")}
             placeholder={userType==="business"?"Business name *":"Your name *"}
             name="name"
             autoComplete="name"
@@ -1703,6 +1803,8 @@ const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError})
         <AuthInput
           value={email}
           onChange={e=>setEmail(e.target.value)}
+          onBlur={()=>markTouched("email")}
+          error={getFieldError("email")}
           placeholder="Email address *"
           type="email"
           name="email"
@@ -1719,6 +1821,8 @@ const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError})
                 setShowPasswordHint(true);
               }
             }}
+            onBlur={()=>markTouched("password")}
+            error={getFieldError("password")}
             onFocus={()=>mode==="register"&&pass.length===0&&setShowPasswordHint(true)}
             placeholder="Password *"
             type="password"
@@ -2041,7 +2145,7 @@ export default function App() {
   const [showSettings,setShowSettings]= useState(false);
   const [showRoleSelect,setShowRoleSelect]= useState(false);
   // Supabase Auth hook
-  const { user, profile, business, loading: authLoading, error: authError, signUp, signIn, signOut, updateRole, role, hasRole } = useAuth();
+  const { user, profile, business, loading: authLoading, error: authError, signUp, signIn, signOut, updateRole, refreshProfile, role, hasRole } = useAuth();
 
   // Fetch events from Supabase on mount, merging with mock data
   useEffect(() => {
@@ -2283,7 +2387,7 @@ export default function App() {
         {/* Tab screens */}
         <div style={{display:"flex",flexDirection:"column",height:"100%",paddingBottom:60}}>
           {tab==="events"&&<EventsScreen events={location?filterByRadius(sortByDistance(events),radiusKm):events} user={appUser} locLabel={locLabel||"All locations"} radiusKm={radiusKm} onRadiusChange={setRadiusKm} onEventClick={setSelected} onSignIn={()=>setShowAuth(true)} showAds={showAds} userLocation={location} eventsLoading={eventsLoading}/>}
-          {tab==="hub"   &&<HubScreen user={appUser} profile={profile} role={role} business={business} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)} onSettings={()=>setShowSettings(true)} onSignOut={handleSignOut}/>}
+          {tab==="hub"   &&<HubScreen user={appUser} profile={profile} role={role} business={business} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)} onSettings={()=>setShowSettings(true)} onSignOut={handleSignOut} onRefreshProfile={refreshProfile} authLoading={authLoading}/>}
           {tab==="about" &&<AboutScreen onSignUp={()=>setShowAuth(true)}/>}
         </div>
 

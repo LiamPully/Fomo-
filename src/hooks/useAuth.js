@@ -90,8 +90,8 @@ export function useAuth() {
     recordAttempt: recordSignInAttempt
   } = useRateLimit(5, 60000);
 
-  // Fetch profile for current user
-  const fetchProfile = useCallback(async (userId) => {
+  // Fetch profile for current user with retry logic
+  const fetchProfile = useCallback(async (userId, attempt = 1) => {
     if (!userId) return null;
     try {
       const { data, error } = await supabase
@@ -100,20 +100,29 @@ export function useAuth() {
         .eq('user_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        // PGRST116 = no rows returned (profile not created yet by trigger)
+        if (error.code === 'PGRST116') {
+          if (attempt < 3) {
+            // Retry after delay to allow trigger to run
+            await new Promise(r => setTimeout(r, 500 * attempt));
+            return fetchProfile(userId, attempt + 1);
+          }
+          return null;
+        }
         console.error('Error fetching profile:', error);
-        return null;
+        return { error: 'Failed to load profile. Please refresh to try again.' };
       }
 
       return data;
     } catch (err) {
       console.error('Error fetching profile:', err);
-      return null;
+      return { error: 'Network error loading profile. Please check your connection.' };
     }
   }, []);
 
-  // Fetch business profile for current user
-  const fetchBusiness = useCallback(async (userId) => {
+  // Fetch business profile for current user with retry
+  const fetchBusiness = useCallback(async (userId, attempt = 1) => {
     if (!userId) return null;
     try {
       const { data, error } = await supabase
@@ -122,15 +131,22 @@ export function useAuth() {
         .eq('user_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        if (error.code === 'PGRST116') {
+          if (attempt < 3) {
+            await new Promise(r => setTimeout(r, 500 * attempt));
+            return fetchBusiness(userId, attempt + 1);
+          }
+          return null;
+        }
         console.error('Error fetching business:', error);
-        return null;
+        return { error: 'Failed to load business profile.' };
       }
 
       return data;
     } catch (err) {
       console.error('Error fetching business:', err);
-      return null;
+      return { error: 'Network error loading business profile.' };
     }
   }, []);
 
@@ -185,20 +201,26 @@ export function useAuth() {
       }
 
       if (authData.user) {
-        // Wait for trigger to create profile
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Fetch the created profile
+        // Fetch the created profile with retry (trigger creates it)
         const profileData = await fetchProfile(authData.user.id);
         const businessData = userType === 'business' ? await fetchBusiness(authData.user.id) : null;
+
+        // Check for profile fetch errors
+        if (profileData?.error) {
+          console.warn('Profile fetch warning:', profileData.error);
+          // Don't fail - user is created, profile might sync eventually
+        }
+        if (businessData?.error) {
+          console.warn('Business fetch warning:', businessData.error);
+        }
 
         // Set user with role
         authData.user.role = userType;
         setUser(authData.user);
-        setProfile(profileData);
-        setBusiness(businessData);
+        setProfile(profileData?.error ? null : profileData);
+        setBusiness(businessData?.error ? null : businessData);
 
-        return { success: true, error: null, role: userType };
+        return { success: true, error: null, role: userType, profileWarning: profileData?.error };
       }
 
       return { success: false, error: 'Account creation failed. Please try again.' };
@@ -251,15 +273,20 @@ export function useAuth() {
       if (authData.user) {
         // Fetch profile and business data
         const profileData = await fetchProfile(authData.user.id);
-        const userRole = getUserRole(authData.user, profileData) || 'customer';
+        const userRole = getUserRole(authData.user, profileData?.error ? null : profileData) || 'customer';
         const businessData = userRole === 'business' ? await fetchBusiness(authData.user.id) : null;
 
         authData.user.role = userRole;
         setUser(authData.user);
-        setProfile(profileData);
-        setBusiness(businessData);
+        setProfile(profileData?.error ? null : profileData);
+        setBusiness(businessData?.error ? null : businessData);
 
-        return { success: true, error: null, role: userRole };
+        // Show warning if profile couldn't load
+        if (profileData?.error) {
+          console.warn('Profile load warning:', profileData.error);
+        }
+
+        return { success: true, error: null, role: userRole, profileWarning: profileData?.error };
       }
 
       return { success: false, error: 'Sign in failed. Please try again.' };
@@ -300,13 +327,14 @@ export function useAuth() {
 
         if (session?.user && mounted) {
           const profileData = await fetchProfile(session.user.id);
-          const userRole = getUserRole(session.user, profileData) || 'customer';
+          const userRole = getUserRole(session.user, profileData?.error ? null : profileData) || 'customer';
           const businessData = userRole === 'business' ? await fetchBusiness(session.user.id) : null;
 
           session.user.role = userRole;
           setUser(session.user);
-          setProfile(profileData);
-          setBusiness(businessData);
+          setProfile(profileData?.error ? null : profileData);
+          setBusiness(businessData?.error ? null : businessData);
+          if (profileData?.error) console.warn('Session profile load warning:', profileData.error);
         }
       } catch (err) {
         console.error('Session check error:', err);
@@ -324,13 +352,14 @@ export function useAuth() {
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user && mounted) {
           const profileData = await fetchProfile(session.user.id);
-          const userRole = getUserRole(session.user, profileData) || 'customer';
+          const userRole = getUserRole(session.user, profileData?.error ? null : profileData) || 'customer';
           const businessData = userRole === 'business' ? await fetchBusiness(session.user.id) : null;
 
           session.user.role = userRole;
           setUser(session.user);
-          setProfile(profileData);
-          setBusiness(businessData);
+          setProfile(profileData?.error ? null : profileData);
+          setBusiness(businessData?.error ? null : businessData);
+          if (profileData?.error) console.warn('Auth state profile load warning:', profileData.error);
         } else if (event === 'SIGNED_OUT' && mounted) {
           setUser(null);
           setProfile(null);
@@ -418,6 +447,22 @@ export function useAuth() {
     }
   }, [user]);
 
+  // Refresh profile (for retry after load failure)
+  const refreshProfile = useCallback(async () => {
+    if (!user?.id) return { success: false, error: 'Not authenticated' };
+    setLoading(true);
+    const profileData = await fetchProfile(user.id);
+    const businessData = await fetchBusiness(user.id);
+    setProfile(profileData?.error ? null : profileData);
+    setBusiness(businessData?.error ? null : businessData);
+    setLoading(false);
+    return {
+      success: !profileData?.error,
+      error: profileData?.error || null,
+      profile: profileData?.error ? null : profileData
+    };
+  }, [user, fetchProfile, fetchBusiness]);
+
   return {
     user,
     profile,
@@ -429,6 +474,7 @@ export function useAuth() {
     signOut,
     updateRole,
     updateProfile,
+    refreshProfile,
     isAuthenticated: !!user,
     role: profile?.role || user?.role || null,
     hasRole: !!(profile?.role || user?.user_metadata?.role),
