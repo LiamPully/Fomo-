@@ -100,7 +100,20 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       open: true,
       // Add security headers in development too
-      headers: securityHeaders
+      headers: securityHeaders,
+      // Proxy Google Places API to avoid CORS
+      proxy: {
+        '/api/places': {
+          target: 'https://maps.googleapis.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/places/, '/maps/api/place'),
+        },
+        '/api/geocode': {
+          target: 'https://maps.googleapis.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/geocode/, '/maps/api/geocode'),
+        }
+      }
     },
     build: {
       outDir: 'dist',

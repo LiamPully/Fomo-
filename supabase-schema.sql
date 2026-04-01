@@ -19,11 +19,24 @@ INSERT INTO categories (name, color) VALUES
     ('Fun', '#E8783A'),
     ('Other', '#888880');
 
--- Businesses table (for event creators)
+-- Profiles table (for ALL users - customers and business owners)
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    name VARCHAR(255) NOT NULL DEFAULT 'User',
+    email VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'customer', -- 'customer' or 'business'
+    avatar_url VARCHAR(500),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Businesses table (additional data for business accounts)
 CREATE TABLE businesses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    business_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
     website VARCHAR(255),
@@ -74,24 +87,37 @@ CREATE TABLE events (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Saved events table (for customers to save/favorite events)
+CREATE TABLE saved_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    event_id UUID REFERENCES events(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, event_id)
+);
+
 -- Create indexes for performance
+CREATE INDEX idx_profiles_user_id ON profiles(user_id);
+CREATE INDEX idx_profiles_role ON profiles(role);
 CREATE INDEX idx_events_category ON events(category_id);
 CREATE INDEX idx_events_status ON events(status);
 CREATE INDEX idx_events_start_time ON events(start_time);
 CREATE INDEX idx_events_location ON events(area);
 CREATE INDEX idx_events_business ON events(business_id);
+CREATE INDEX idx_saved_events_user ON saved_events(user_id);
 
 -- Enable Row Level Security (RLS)
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE saved_events ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for categories (public read-only)
 CREATE POLICY "Categories are viewable by everyone"
     ON categories FOR SELECT USING (true);
 
 -- Note: Only admins should modify categories
--- This requires an admin role check via user metadata
 CREATE POLICY "Only admins can insert categories"
     ON categories FOR INSERT WITH CHECK (
         EXISTS (
@@ -116,6 +142,16 @@ CREATE POLICY "Only admins can delete categories"
         )
     );
 
+-- RLS Policies for profiles
+CREATE POLICY "Profiles are viewable by everyone"
+    ON profiles FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert their own profile"
+    ON profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own profile"
+    ON profiles FOR UPDATE USING (auth.uid() = user_id);
+
 -- RLS Policies for businesses
 CREATE POLICY "Businesses are viewable by everyone"
     ON businesses FOR SELECT USING (true);
@@ -125,9 +161,6 @@ CREATE POLICY "Users can insert their own business"
 
 CREATE POLICY "Users can update their own business"
     ON businesses FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own business"
-    ON businesses FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for events
 CREATE POLICY "Published events are viewable by everyone"
@@ -161,6 +194,16 @@ CREATE POLICY "Business owners can delete their events"
         )
     );
 
+-- RLS Policies for saved_events
+CREATE POLICY "Users can view their own saved events"
+    ON saved_events FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can save events"
+    ON saved_events FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can unsave events"
+    ON saved_events FOR DELETE USING (auth.uid() = user_id);
+
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -171,6 +214,10 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers for updated_at
+CREATE TRIGGER update_profiles_updated_at
+    BEFORE UPDATE ON profiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_businesses_updated_at
     BEFORE UPDATE ON businesses
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -187,26 +234,81 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Function to auto-create business record on user signup
+-- Function to auto-create profile record on user signup
+-- This runs AFTER INSERT on auth.users
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    user_name TEXT;
+    user_role TEXT;
+    business_name TEXT;
 BEGIN
-    INSERT INTO businesses (user_id, name, email, event_count)
+    -- Extract values from user metadata
+    user_name := COALESCE(NEW.raw_user_meta_data->>'name', NEW.email);
+    user_role := COALESCE(NEW.raw_user_meta_data->>'role', 'customer');
+    business_name := NEW.raw_user_meta_data->>'business_name';
+
+    -- Create profile record for ALL users
+    INSERT INTO profiles (user_id, name, email, role)
     VALUES (
         NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'business_name', 'My Business'),
+        user_name,
         NEW.email,
-        0
+        user_role
     );
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
 
--- Trigger to auto-create business on auth user creation
+    -- If business role and business_name provided, also create business record
+    IF user_role = 'business' AND business_name IS NOT NULL AND business_name != '' THEN
+        INSERT INTO businesses (user_id, profile_id, business_name, email)
+        VALUES (
+            NEW.id,
+            (SELECT id FROM profiles WHERE user_id = NEW.id),
+            business_name,
+            NEW.email
+        );
+    END IF;
+
+    RETURN NEW;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Log the error but don't prevent user creation
+        RAISE WARNING 'Failed to create profile for user %: %', NEW.id, SQLERRM;
+        RETURN NEW;
+END;
+$$ language 'plpgsql' SECURITY DEFINER;
+
+-- Trigger to auto-create profile on auth user creation
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- Function to update user role
+CREATE OR REPLACE FUNCTION update_user_role(target_user_id UUID, new_role TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    -- Validate role
+    IF new_role NOT IN ('customer', 'business') THEN
+        RAISE EXCEPTION 'Invalid role. Must be customer or business';
+    END IF;
+
+    -- Update profile
+    UPDATE profiles
+    SET role = new_role
+    WHERE user_id = target_user_id;
+
+    -- Update auth user metadata
+    UPDATE auth.users
+    SET raw_user_meta_data = jsonb_set(
+        COALESCE(raw_user_meta_data, '{}'::jsonb),
+        '{role}',
+        to_jsonb(new_role::text)
+    )
+    WHERE id = target_user_id;
+
+    RETURN FOUND;
+END;
+$$ language 'plpgsql' SECURITY DEFINER;
 
 -- Function to maintain business event_count automatically
 CREATE OR REPLACE FUNCTION update_business_event_count()
