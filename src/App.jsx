@@ -862,7 +862,7 @@ const EventsScreen = ({events,user,locLabel,radiusKm,onRadiusChange,onEventClick
 /* ─────────────────────────────────────────────────────────────
    HUB SCREEN
 ───────────────────────────────────────────────────────────── */
-const HubScreen = ({user,events,onCreateEvent,onMyEvents,onSignIn}) => {
+const HubScreen = ({user,events,onCreateEvent,onMyEvents,onSignIn,onRefreshProfile}) => {
   if (!user) return (
     <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:BG}}>
       <div style={{fontSize:52,marginBottom:20}}>🏪</div>
@@ -871,6 +871,18 @@ const HubScreen = ({user,events,onCreateEvent,onMyEvents,onSignIn}) => {
       <button onClick={onSignIn} style={{background:BLACK,color:WHITE,border:"none",borderRadius:999,padding:"14px 36px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>Sign in</button>
     </div>
   );
+
+  // Show recovery UI if user exists but business profile is missing
+  if (user && !user.businessLoaded) {
+    return (
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:BG}}>
+        <div style={{fontSize:48,marginBottom:16}}>⏳</div>
+        <h2 style={{fontFamily:FONT,fontSize:20,fontWeight:800,color:BLACK,marginBottom:8,textAlign:"center"}}>Setting up your profile</h2>
+        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,textAlign:"center",lineHeight:1.65,marginBottom:24,maxWidth:280}}>Your account was created but we're still setting up your business profile. This should only take a moment.</p>
+        <button onClick={onRefreshProfile} style={{background:ORANGE,color:WHITE,border:"none",borderRadius:999,padding:"14px 36px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>Try Again</button>
+      </div>
+    );
+  }
 
   const myPub=events.filter(e=>e.businessId===user.id&&e.status==="published");
 
@@ -986,7 +998,7 @@ const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError})
         await onRegister(email,pass,name);
       }
     }catch(err){
-      // Error is handled by parent via authError
+      setLocalError(err.message || "An error occurred. Please try again.");
     }finally{
       setLoading(false);
     }
@@ -1211,7 +1223,7 @@ export default function App() {
   const [showCreate,setShowCreate]    = useState(false);
   const [showMyEv,setShowMyEv]        = useState(false);
   // Supabase Auth hook
-  const { user, business, loading: authLoading, error: authError, signUp, signIn, signOut, refreshBusiness } = useAuth();
+  const { user, business, loading: authLoading, error: authError, signUp, signIn, signOut, refreshBusiness, clearError } = useAuth();
 
   // Fetch events from Supabase on mount
   useEffect(() => {
@@ -1284,11 +1296,6 @@ export default function App() {
     await signOut();
     setTab("events");
   },[signOut]);
-
-  const register = useCallback(async(name,email)=>{
-    setUser({id:`u_${Date.now()}`,name,email,count:0});
-    setShowAuth(false); setTab("hub");
-  },[]);
 
   const handleSave = useCallback(async(data)=>{
     try {
@@ -1384,9 +1391,10 @@ export default function App() {
   // Build user object for components (combining auth user + business)
   const appUser = user?{
     id: business?.id||user.id,
-    name: business?.name||user.email?.split('@')[0],
+    name: business?.business_name||business?.name||user.email?.split('@')[0],
     email: user.email,
     count: business?.event_count||0,
+    businessLoaded: !!business,
   }:null;
 
   return (
@@ -1430,7 +1438,7 @@ export default function App() {
         {/* Tab screens */}
         <div style={{display:"flex",flexDirection:"column",height:"100%",paddingBottom:60}}>
           {tab==="events"&&<EventsScreen events={location?filterByRadius(sortByDistance(events),radiusKm):events} user={appUser} locLabel={locLabel||"All locations"} radiusKm={radiusKm} onRadiusChange={setRadiusKm} onEventClick={setSelected} onSignIn={()=>setShowAuth(true)} showAds={showAds} userLocation={location} eventsLoading={eventsLoading}/>}
-          {tab==="hub"   &&<HubScreen user={appUser} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)}/>}
+          {tab==="hub"   &&<HubScreen user={appUser} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)} onRefreshProfile={refreshBusiness}/>}
           {tab==="about" &&<AboutScreen onSignUp={()=>setShowAuth(true)}/>}
         </div>
 
@@ -1475,7 +1483,7 @@ export default function App() {
           onLogin={handleLogin}
           onRegister={handleRegister}
           error={authError}
-          clearError={()=>{}}
+          clearError={clearError}
         />
       </div>
     </div>

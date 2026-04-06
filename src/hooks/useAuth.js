@@ -79,8 +79,10 @@ export function useAuth() {
     recordAttempt: recordSignInAttempt
   } = useRateLimit(5, 60000);
 
-  // Fetch business profile for current user
-  const fetchBusiness = useCallback(async (userId) => {
+  // Fetch business profile for current user with retry logic
+  const fetchBusiness = useCallback(async (userId, attempt = 1) => {
+    if (!userId) return null;
+
     try {
       const { data, error } = await supabase
         .from('businesses')
@@ -88,7 +90,17 @@ export function useAuth() {
         .eq('user_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
+        // PGRST116 = no rows returned (business not created yet by trigger)
+        if (error.code === 'PGRST116') {
+          if (attempt < 5) {
+            // Exponential backoff: 300ms, 600ms, 1200ms, 2400ms
+            await new Promise(resolve => setTimeout(resolve, 300 * attempt));
+            return fetchBusiness(userId, attempt + 1);
+          }
+          console.warn('Business record not found after retries');
+          return null;
+        }
         console.error('Error fetching business:', error);
         return null;
       }
@@ -277,6 +289,7 @@ export function useAuth() {
     signIn,
     signOut,
     refreshBusiness,
+    clearError: () => setError(null),
     isAuthenticated: !!user,
   };
 }
