@@ -406,60 +406,6 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
     onManual(loc);
   },[onManual]);
 
-  const handlePredictionSelect = async (prediction) => {
-    setIsGeocoding(true);
-    setGeocodeError(null);
-    console.log('[LocationModal] Selected prediction:', prediction.description, 'isFallback:', prediction.isFallback);
-
-    try {
-      // Always use geocodeAddress - works with any text (Google predictions OR fallbacks)
-      // Fallback predictions have fake place_ids that can't be used with Places API
-      const { geocodeAddress } = await import('./lib/location.js');
-      const result = await geocodeAddress(prediction.description);
-
-      setIsGeocoding(false);
-
-      if (result.location) {
-        console.log('[LocationModal] Geocoded successfully:', result.location);
-        setSelectedLocation({
-          name: prediction.description,
-          lat: result.location.lat,
-          lng: result.location.lng
-        });
-      } else {
-        console.error('[LocationModal] Geocoding failed:', result.error);
-        setGeocodeError(`Could not get coordinates: ${result.error || 'Unknown error'}. Please try another location.`);
-      }
-    } catch (err) {
-      setIsGeocoding(false);
-      console.error('[LocationModal] Error in handlePredictionSelect:', err);
-      setGeocodeError(`Error fetching location: ${err.message}. Please try again.`);
-    }
-  };
-
-  const handleContinue = () => {
-    if (selectedLocation) {
-      onManual(selectedLocation);
-    } else if (inputValue.trim()) {
-      // Try to geocode the input as fallback
-      setIsGeocoding(true);
-      import('./lib/location.js').then(({ geocodeAddress }) => {
-        geocodeAddress(inputValue).then(result => {
-          setIsGeocoding(false);
-          if (result.location) {
-            onManual({
-              name: inputValue,
-              lat: result.location.lat,
-              lng: result.location.lng
-            });
-          } else {
-            setGeocodeError('Please select a valid location from the suggestions.');
-          }
-        });
-      });
-    }
-  };
-
   if (!open) return null;
   return (
     <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:80,background:"rgba(0,0,0,0.45)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={(e)=>{e.target === e.currentTarget && e.stopPropagation()}}>
@@ -483,7 +429,7 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
             Skip for now
           </button>
         </>) : (<>
-          <LocationSearch onSelect={handleSelect} />
+          <LocationSearch key="location-search" onSelect={handleSelect} />
           <button onClick={()=>setShowM(false)} style={{width:"100%",background:"none",border:"none",color:GRAY1,fontSize:14,cursor:"pointer",fontFamily:FONT,marginTop:12}}>
             ← Back
           </button>
