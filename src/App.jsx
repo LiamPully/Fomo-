@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useLocation, useLocationSearchWithQuery } from "./hooks/useLocation";
+import { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
+import { useLocation } from "./hooks/useLocation";
 import { useAuth } from "./hooks/useAuth";
 import { MAIN_CATEGORIES, TOP_LEVEL_CATEGORIES, SUB_CATEGORIES, getCategoryColor } from "./lib/categories";
 import { fetchEvents, createEvent } from "./api/events";
@@ -244,14 +244,10 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
   const [isGeocoding,setIsGeocoding]=useState(false);
   const [geocodeError,setGeocodeError]=useState(null);
 
-  // Local input value - does NOT trigger search effects while typing
+  // Local input value - stable, no re-renders from parent
   const [inputValue, setInputValue] = useState("");
-
-  // Search query - only updated after debounce to trigger API calls
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Import location search hook with searchQuery
-  const { predictions, loading: searchLoading, error: searchError } = useLocationSearchWithQuery(searchQuery);
+  const [predictions, setPredictions] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // Reset state when modal opens
   useEffect(()=>{
@@ -261,17 +257,37 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
       setIsGeocoding(false);
       setGeocodeError(null);
       setInputValue("");
-      setSearchQuery("");
+      setPredictions([]);
     }
   },[open]);
 
-  // Debounced update of search query from input value
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchQuery(inputValue);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [inputValue]);
+  // Stable input handler - no extra state updates that cause re-render
+  const handleInputChange = useCallback((e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    setSelectedLocation(null);
+
+    // Debounced search
+    if (window.searchTimeout) clearTimeout(window.searchTimeout);
+    if (val.length >= 3) {
+      setSearchLoading(true);
+      window.searchTimeout = setTimeout(async () => {
+        try {
+          const { searchPlaces } = await import('./lib/location.js');
+          const result = await searchPlaces(val);
+          setPredictions(result.predictions || []);
+        } catch (err) {
+          console.error('Search failed:', err);
+          setPredictions([]);
+        } finally {
+          setSearchLoading(false);
+        }
+      }, 300);
+    } else {
+      setPredictions([]);
+      setSearchLoading(false);
+    }
+  }, []);
 
   const handlePredictionSelect = async (prediction) => {
     setIsGeocoding(true);
@@ -329,8 +345,8 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
 
   if (!open) return null;
   return (
-    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:80,background:"rgba(0,0,0,0.45)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-      <div style={{background:WHITE,borderRadius:"22px 22px 0 0",padding:"28px 20px max(44px, env(safe-area-inset-bottom))",animation:"slideUp .3s ease",maxHeight:"70vh",overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:80,background:"rgba(0,0,0,0.45)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}} onClick={(e)=>{e.target === e.currentTarget && e.stopPropagation()}}>
+      <div style={{background:WHITE,borderRadius:"22px 22px 0 0",padding:"28px 20px 44px",maxHeight:"85dvh",overflowY:"auto",WebkitOverflowScrolling:"touch"}} onClick={(e)=>e.stopPropagation()}>
         {/* Pin icon */}
         <div style={{width:52,height:52,background:GRAY3,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
           <span style={{color:BLACK}}><Ico n="pin" s={24} c={BLACK}/></span>
@@ -350,16 +366,17 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
             Skip for now
           </button>
         </>) : (<>
-          <div style={{position:"relative",marginBottom:12}}>
+          <div style={{position:"relative",marginBottom:12}} onClick={(e)=>e.stopPropagation()}>
             <input
               value={inputValue}
-              onChange={e=>{setInputValue(e.target.value);setSelectedLocation(null);}}
+              onChange={handleInputChange}
               placeholder="Search for address, street, suburb, or city..."
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
               spellCheck="false"
-              style={{width:"100%",border:`1.5px solid ${geocodeError?"#E8783A":GRAY2}`,borderRadius:14,padding:"13px 16px",fontSize:15,outline:"none",fontFamily:FONT,boxSizing:"border-box",background:GRAY3}}
+              onBlur={(e)=>{e.preventDefault(); e.stopPropagation();}}
+              style={{width:"100%",border:`1.5px solid ${geocodeError?"#E8783A":GRAY2}`,borderRadius:14,padding:"13px 16px",fontSize:16,outline:"none",fontFamily:FONT,boxSizing:"border-box",background:GRAY3,WebkitAppearance:"none",touchAction:"manipulation"}}
             />
             {searchLoading && (
               <div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)"}}>
@@ -402,7 +419,7 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
               <Ico n="pin" s={14} c={ORANGE}/>
               <span style={{fontFamily:FONT,fontSize:13,color:BLACK,flex:1}}>{selectedLocation.name}</span>
               <button
-                onClick={()=>{setSelectedLocation(null);setInputValue("");setSearchQuery("");}}
+                onClick={()=>{setSelectedLocation(null);setInputValue("");}}
                 style={{background:"none",border:"none",color:GRAY1,cursor:"pointer",fontSize:12}}
               >
                 Change
@@ -444,6 +461,7 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
     </div>
   );
 };
+const MemoizedLocationModal = memo(LocationModal);
 
 /* ─────────────────────────────────────────────────────────────
    AD BANNER (Dormant - Business-facing placeholders)
@@ -1396,6 +1414,30 @@ export default function App() {
     setTab(t);
   },[user]);
 
+  // Stable callbacks for LocationModal to prevent re-renders
+  const handleLocationAllow = useCallback(async()=>{
+    const pos = await requestLocation();
+    if (pos) {
+      setLocLabel("Current location");
+      setShowLoc(false);
+    }
+  },[requestLocation]);
+
+  const handleLocationManual = useCallback((locData)=>{
+    if (locData && locData.lat && locData.lng) {
+      setManualLocation(locData.lat, locData.lng, locData.name);
+      setLocLabel(locData.name);
+    } else if (locData === null) {
+      setLocLabel(null);
+    }
+    setShowLoc(false);
+  },[setManualLocation]);
+
+  const handleLocationSkip = useCallback(()=>{
+    setLocLabel(null);
+    setShowLoc(false);
+  },[]);
+
   // Build user object for components (combining auth user + business)
   const appUser = user?{
     id: business?.id||user.id,
@@ -1461,29 +1503,11 @@ export default function App() {
         <BottomNav tab={tab} onTab={handleTab}/>
 
         {/* Modals */}
-        <LocationModal
+        <MemoizedLocationModal
           open={showLoc&&tab==="events"&&!selectedEvent}
-          onAllow={async()=>{
-            const pos = await requestLocation();
-            if (pos) {
-              setLocLabel("Current location");
-              setShowLoc(false);
-            }
-          }}
-          onManual={(locData)=>{
-            if (locData && locData.lat && locData.lng) {
-              setManualLocation(locData.lat, locData.lng, locData.name);
-              setLocLabel(locData.name);
-            } else if (locData === null) {
-              // User skipped
-              setLocLabel(null);
-            }
-            setShowLoc(false);
-          }}
-          onSkip={()=>{
-            setLocLabel(null);
-            setShowLoc(false);
-          }}
+          onAllow={handleLocationAllow}
+          onManual={handleLocationManual}
+          onSkip={handleLocationSkip}
         />
         <AuthModal
           open={showAuth}
