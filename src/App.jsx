@@ -855,14 +855,6 @@ const EventsScreen = ({events,user,locLabel,radiusKm,onRadiusChange,onEventClick
             <p style={{fontFamily:FONT,fontSize:13}}>{hasDistanceFiltering ? `Try increasing the search radius or changing filters.` : `Try a different filter.`}</p>
           </div>
         )}
-        {/* Business CTA */}
-        {!user && (
-          <div style={{background:BLACK,borderRadius:20,padding:"28px 24px",textAlign:"center",marginBottom:16}}>
-            <p style={{fontFamily:FONT,fontSize:18,fontWeight:800,color:WHITE,marginBottom:8}}>Promote your event</p>
-            <p style={{fontFamily:FONT,fontSize:13,color:"#888",marginBottom:20,lineHeight:1.5}}>Reach local audiences from R50/month</p>
-            <button onClick={onSignIn} style={{background:ORANGE,color:WHITE,border:"none",borderRadius:999,padding:"12px 28px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>Get started →</button>
-          </div>
-        )}
       </div>
     </div>
   );
