@@ -483,7 +483,7 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
             Skip for now
           </button>
         </>) : (<>
-          <LocationSearch onSelect={(loc) => onManual(loc)} />
+          <LocationSearch onSelect={handleSelect} />
           <button onClick={()=>setShowM(false)} style={{width:"100%",background:"none",border:"none",color:GRAY1,fontSize:14,cursor:"pointer",fontFamily:FONT,marginTop:12}}>
             ← Back
           </button>

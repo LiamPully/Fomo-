@@ -37,7 +37,7 @@ const LocationSearch = memo(({ onSelect }) => {
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
 
-  // Focus input on mount
+  // Focus input on mount only
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
