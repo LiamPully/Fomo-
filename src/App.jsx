@@ -241,30 +241,22 @@ const SIco = ({n,s,c}) => <Ico n={n} s={s} c={c}/>;
 ───────────────────────────────────────────────────────────── */
 const LocationModal = ({open,onAllow,onManual,onSkip}) => {
   const [showM,setShowM]=useState(false);
-  const [manual,setManual]=useState("");
   const [selectedLocation,setSelectedLocation]=useState(null);
   const [isGeocoding,setIsGeocoding]=useState(false);
   const [geocodeError,setGeocodeError]=useState(null);
 
-  // Import location search hook
+  // Import location search hook - use query/setQuery directly for input
   const { query, setQuery, predictions, loading: searchLoading, error: searchError, selectPrediction } = useLocationSearch();
 
   // Reset state when modal opens
   useEffect(()=>{
     if(open){
       setShowM(false);
-      setManual("");
-      setQuery("");
       setSelectedLocation(null);
       setIsGeocoding(false);
       setGeocodeError(null);
     }
-  },[open,setQuery]);
-
-  // Sync manual input with search query
-  useEffect(()=>{
-    setQuery(manual);
-  },[manual,setQuery]);
+  },[open]);
 
   const handlePredictionSelect = async (prediction) => {
     setIsGeocoding(true);
@@ -286,8 +278,6 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
           lat: result.location.lat,
           lng: result.location.lng
         });
-        setManual(prediction.description);
-        setQuery(prediction.description);
       } else {
         console.error('[LocationModal] Geocoding failed:', result.error);
         setGeocodeError(`Could not get coordinates: ${result.error || 'Unknown error'}. Please try another location.`);
@@ -302,15 +292,15 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
   const handleContinue = () => {
     if (selectedLocation) {
       onManual(selectedLocation);
-    } else if (manual.trim()) {
-      // Try to geocode the manual input as fallback
+    } else if (query.trim()) {
+      // Try to geocode the query input as fallback
       setIsGeocoding(true);
       import('./lib/location.js').then(({ geocodeAddress }) => {
-        geocodeAddress(manual).then(result => {
+        geocodeAddress(query).then(result => {
           setIsGeocoding(false);
           if (result.location) {
             onManual({
-              name: manual,
+              name: query,
               lat: result.location.lat,
               lng: result.location.lng
             });
@@ -347,8 +337,8 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
         </>) : (<>
           <div style={{position:"relative",marginBottom:12}}>
             <input
-              value={manual}
-              onChange={e=>{setManual(e.target.value);setSelectedLocation(null);}}
+              value={query}
+              onChange={e=>{setQuery(e.target.value);setSelectedLocation(null);}}
               placeholder="Search for address, street, suburb, or city..."
               autoFocus
               style={{width:"100%",border:`1.5px solid ${geocodeError?"#E8783A":GRAY2}`,borderRadius:14,padding:"13px 16px",fontSize:15,outline:"none",fontFamily:FONT,boxSizing:"border-box",background:GRAY3}}
@@ -394,7 +384,7 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
               <Ico n="pin" s={14} c={ORANGE}/>
               <span style={{fontFamily:FONT,fontSize:13,color:BLACK,flex:1}}>{selectedLocation.name}</span>
               <button
-                onClick={()=>{setSelectedLocation(null);setManual("");setQuery("");}}
+                onClick={()=>{setSelectedLocation(null);setQuery("");}}
                 style={{background:"none",border:"none",color:GRAY1,cursor:"pointer",fontSize:12}}
               >
                 Change
@@ -411,17 +401,17 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
 
           <button
             onClick={handleContinue}
-            disabled={isGeocoding || (!manual.trim() && !selectedLocation)}
+            disabled={isGeocoding || (!query.trim() && !selectedLocation)}
             style={{
               width:"100%",
-              background:isGeocoding||(!manual.trim()&&!selectedLocation)?GRAY2:BLACK,
-              color:isGeocoding||(!manual.trim()&&!selectedLocation)?GRAY1:WHITE,
+              background:isGeocoding||(!query.trim()&&!selectedLocation)?GRAY2:BLACK,
+              color:isGeocoding||(!query.trim()&&!selectedLocation)?GRAY1:WHITE,
               border:"none",
               borderRadius:999,
               padding:"15px 0",
               fontSize:15,
               fontWeight:700,
-              cursor:(isGeocoding||(!manual.trim()&&!selectedLocation))?"not-allowed":"pointer",
+              cursor:(isGeocoding||(!query.trim()&&!selectedLocation))?"not-allowed":"pointer",
               fontFamily:FONT,
               marginBottom:12
             }}
