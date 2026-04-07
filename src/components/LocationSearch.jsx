@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, memo } from 'react';
+import { useState, useCallback, useRef, memo } from 'react';
 
 const FONT = "'Sora', system-ui, sans-serif";
 const GRAY1 = "#888880";
@@ -36,11 +36,6 @@ const LocationSearch = memo(({ onSelect }) => {
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
-
-  // Focus input on mount only
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
 
   // Handle input changes
   const onChange = useCallback((e) => {
