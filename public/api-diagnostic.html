@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Diagnostic</title>
+    <style>
+        body { font-family: sans-serif; max-width: 700px; margin: 50px auto; padding: 20px; }
+        .error { background: #fee; color: #c33; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .success { background: #efe; color: #3c3; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .info { background: #eef; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .warning { background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; }
+        button { background: #E8783A; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 10px 5px; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 API Diagnostic Tool</h1>
+    <div id="output">Click "Run Full Diagnostic" to check everything:</div>
+
+    <button onclick="runDiagnostic()">Run Full Diagnostic</button>
+    <button onclick="testCORS()">Test CORS Issue</button>
+    <button onclick="clearLog()">Clear</button>
+
+    <div id="details"></div>
+
+    <script>
+        const API_KEY = 'AIzaSyBaAvjO1XpOHlt-Pq_FSGnmFzDme210kMM';
+
+        function log(msg, type='info') {
+            const div = document.getElementById('output');
+            div.innerHTML += `<div class="${type}">${msg}</div>`;
+        }
+
+        function clearLog() {
+            document.getElementById('output').innerHTML = '';
+            document.getElementById('details').innerHTML = '';
+        }
+
+        async function runDiagnostic() {
+            clearLog();
+            log('<h3>Running diagnostic...</h3>', 'info');
+
+            // Test 1: Basic fetch
+            log('Test 1: Checking if fetch works at all...', 'info');
+            try {
+                const test = await fetch('https://httpbin.org/get');
+                if (test.ok) {
+                    log('✅ Basic fetch works (internet connection OK)', 'success');
+                }
+            } catch (e) {
+                log(`❌ Can't even reach httpbin.org: ${e.message}`, 'error');
+                log('Your browser may be offline or blocking requests.', 'error');
+                return;
+            }
+
+            // Test 2: Try Places API
+            log('<br>Test 2: Trying Places API...', 'info');
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                const response = await fetch(
+                    `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=Cape+Town&components=country:za&key=${API_KEY}`,
+                    { signal: controller.signal }
+                );
+
+                clearTimeout(timeoutId);
+
+                const text = await response.text();
+
+                if (!text) {
+                    log('❌ Empty response from Google', 'error');
+                } else {
+                    try {
+                        const data = JSON.parse(text);
+                        log(`Status: ${data.status}`, data.status === 'OK' ? 'success' : 'error');
+
+                        if (data.error_message) {
+                            log(`Error message: ${data.error_message}`, 'error');
+                        }
+
+                        if (data.status === 'OK') {
+                            log(`✅ Places API works! Found ${data.predictions.length} results`, 'success');
+                        } else if (data.status === 'REQUEST_DENIED') {
+                            log('❌ REQUEST_DENIED - Key is restricted or API not enabled', 'error');
+                            showFixInstructions();
+                        } else if (data.status === 'INVALID_REQUEST') {
+                            log('❌ INVALID_REQUEST - Missing required parameters', 'error');
+                        } else {
+                            log(`⚠️ Response: ${JSON.stringify(data, null, 2)}`, 'warning');
+                        }
+                    } catch (e) {
+                        log(`❌ Couldn't parse JSON: ${e.message}`, 'error');
+                        log(`Raw response: ${text.substring(0, 200)}`, 'error');
+                    }
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    log('❌ Request timed out after 5 seconds', 'error');
+                } else if (err.message.includes('Failed to fetch')) {
+                    log(`❌ Failed to fetch - This is likely a CORS issue`, 'error');
+                    log(`Error: ${err.message}`, 'error');
+                    showCORSInfo();
+                } else {
+                    log(`❌ Error: ${err.message}`, 'error');
+                }
+            }
+        }
+
+        function testCORS() {
+            clearLog();
+            log('<h3>Testing CORS...</h3>', 'info');
+            log('The Google Places API Legacy has CORS restrictions.', 'warning');
+            log('This means it may not work directly from the browser.', 'warning');
+            log('<br><strong>Solutions:</strong>', 'info');
+            log('1. Use a backend proxy (server-side request)', 'info');
+            log('2. Use the NEW Places API (different endpoint, supports CORS)', 'info');
+            log('3. Use JSONP (limited support)', 'info');
+            log('<br>We may need to revert the app to use server-side requests.', 'warning');
+        }
+
+        function showCORSInfo() {
+            document.getElementById('details').innerHTML = `
+                <div class="warning">
+                    <h3>🚫 CORS Block Detected</h3>
+                    <p>The Google Places API (Legacy) doesn't allow direct browser requests.</p>
+                    <p><strong>Why:</strong> Browser security (CORS) blocks the response.</p>
+                    <p><strong>Fix options:</strong></p>
+                    <ol>
+                        <li><strong>Best:</strong> Use a backend proxy - the app makes requests to your server, which calls Google</li>
+                        <li><strong>Alternative:</strong> Switch to the NEW Places API which has better CORS support</li>
+                    </ol>
+                </div>
+            `;
+        }
+
+        function showFixInstructions() {
+            document.getElementById('details').innerHTML = `
+                <div class="warning">
+                    <h3>🔧 API Key Fix Needed</h3>
+                    <p>Your API key is being rejected. Check:</p>
+                    <ol>
+                        <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Credentials page</a></li>
+                        <li>Click "Edit" on your API key</li>
+                        <li>Application restrictions: Add <code>http://localhost:3001/*</code></li>
+                        <li>API restrictions: Enable Places API AND Geocoding API</li>
+                        <li>Wait 2 minutes and retry</li>
+                    </ol>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

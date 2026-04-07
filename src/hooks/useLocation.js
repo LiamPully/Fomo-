@@ -218,3 +218,70 @@ export const useLocationSearch = (setManualLocation) => {
     selectPrediction
   };
 };
+
+// Hook for location search with external query control (prevents re-render on every keystroke)
+export const useLocationSearchWithQuery = (externalQuery) => {
+  const [predictions, setPredictions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Search when externalQuery changes (already debounced by caller)
+  useEffect(() => {
+    if (!externalQuery || externalQuery.length < 3) {
+      setPredictions([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    searchPlaces(externalQuery)
+      .then((result) => {
+        if (result.predictions && result.predictions.length > 0) {
+          setPredictions(result.predictions);
+        } else {
+          // Fallback predictions
+          setPredictions(getFallbackPredictions(externalQuery));
+        }
+        setError(null);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setPredictions(getFallbackPredictions(externalQuery));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [externalQuery]);
+
+  // Fallback predictions for common South African locations
+  const getFallbackPredictions = (searchQuery) => {
+    const saLocations = [
+      { place_id: 'fallback_ec', description: 'Eastern Cape, South Africa', isFallback: true },
+      { place_id: 'fallback_wc', description: 'Western Cape, South Africa', isFallback: true },
+      { place_id: 'fallback_nc', description: 'Northern Cape, South Africa', isFallback: true },
+      { place_id: 'fallback_kzn', description: 'KwaZulu-Natal, South Africa', isFallback: true },
+      { place_id: 'fallback_gp', description: 'Gauteng, South Africa', isFallback: true },
+      { place_id: 'fallback_mp', description: 'Mpumalanga, South Africa', isFallback: true },
+      { place_id: 'fallback_lp', description: 'Limpopo, South Africa', isFallback: true },
+      { place_id: 'fallback_nw', description: 'North West, South Africa', isFallback: true },
+      { place_id: 'fallback_fs', description: 'Free State, South Africa', isFallback: true },
+      { place_id: 'fallback_ct', description: 'Cape Town, Western Cape, South Africa', isFallback: true },
+      { place_id: 'fallback_jhb', description: 'Johannesburg, Gauteng, South Africa', isFallback: true },
+      { place_id: 'fallback_dbn', description: 'Durban, KwaZulu-Natal, South Africa', isFallback: true },
+      { place_id: 'fallback_pta', description: 'Pretoria, Gauteng, South Africa', isFallback: true },
+      { place_id: 'fallback_pe', description: 'Port Elizabeth, Eastern Cape, South Africa', isFallback: true },
+      { place_id: 'fallback_bloem', description: 'Bloemfontein, Free State, South Africa', isFallback: true }
+    ];
+
+    const lowerQuery = searchQuery.toLowerCase();
+    return saLocations.filter(loc =>
+      loc.description.toLowerCase().includes(lowerQuery)
+    );
+  };
+
+  return {
+    predictions,
+    loading,
+    error
+  };
+};

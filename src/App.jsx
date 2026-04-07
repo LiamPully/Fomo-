@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useLocation } from "./hooks/useLocation";
-import { useLocationSearch } from "./hooks/useLocation";
+import { useLocation, useLocationSearchWithQuery } from "./hooks/useLocation";
 import { useAuth } from "./hooks/useAuth";
 import { MAIN_CATEGORIES, TOP_LEVEL_CATEGORIES, SUB_CATEGORIES, getCategoryColor } from "./lib/categories";
 import { fetchEvents, createEvent } from "./api/events";
@@ -245,8 +244,14 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
   const [isGeocoding,setIsGeocoding]=useState(false);
   const [geocodeError,setGeocodeError]=useState(null);
 
-  // Import location search hook - use query/setQuery directly for input
-  const { query, setQuery, predictions, loading: searchLoading, error: searchError, selectPrediction } = useLocationSearch();
+  // Local input value - does NOT trigger search effects while typing
+  const [inputValue, setInputValue] = useState("");
+
+  // Search query - only updated after debounce to trigger API calls
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Import location search hook with searchQuery
+  const { predictions, loading: searchLoading, error: searchError } = useLocationSearchWithQuery(searchQuery);
 
   // Reset state when modal opens
   useEffect(()=>{
@@ -255,8 +260,18 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
       setSelectedLocation(null);
       setIsGeocoding(false);
       setGeocodeError(null);
+      setInputValue("");
+      setSearchQuery("");
     }
   },[open]);
+
+  // Debounced update of search query from input value
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(inputValue);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [inputValue]);
 
   const handlePredictionSelect = async (prediction) => {
     setIsGeocoding(true);
@@ -292,15 +307,15 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
   const handleContinue = () => {
     if (selectedLocation) {
       onManual(selectedLocation);
-    } else if (query.trim()) {
-      // Try to geocode the query input as fallback
+    } else if (inputValue.trim()) {
+      // Try to geocode the input as fallback
       setIsGeocoding(true);
       import('./lib/location.js').then(({ geocodeAddress }) => {
-        geocodeAddress(query).then(result => {
+        geocodeAddress(inputValue).then(result => {
           setIsGeocoding(false);
           if (result.location) {
             onManual({
-              name: query,
+              name: inputValue,
               lat: result.location.lat,
               lng: result.location.lng
             });
@@ -337,9 +352,13 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
         </>) : (<>
           <div style={{position:"relative",marginBottom:12}}>
             <input
-              value={query}
-              onChange={e=>{setQuery(e.target.value);setSelectedLocation(null);}}
+              value={inputValue}
+              onChange={e=>{setInputValue(e.target.value);setSelectedLocation(null);}}
               placeholder="Search for address, street, suburb, or city..."
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
               style={{width:"100%",border:`1.5px solid ${geocodeError?"#E8783A":GRAY2}`,borderRadius:14,padding:"13px 16px",fontSize:15,outline:"none",fontFamily:FONT,boxSizing:"border-box",background:GRAY3}}
             />
             {searchLoading && (
@@ -383,7 +402,7 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
               <Ico n="pin" s={14} c={ORANGE}/>
               <span style={{fontFamily:FONT,fontSize:13,color:BLACK,flex:1}}>{selectedLocation.name}</span>
               <button
-                onClick={()=>{setSelectedLocation(null);setQuery("");}}
+                onClick={()=>{setSelectedLocation(null);setInputValue("");setSearchQuery("");}}
                 style={{background:"none",border:"none",color:GRAY1,cursor:"pointer",fontSize:12}}
               >
                 Change
@@ -400,17 +419,17 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
 
           <button
             onClick={handleContinue}
-            disabled={isGeocoding || (!query.trim() && !selectedLocation)}
+            disabled={isGeocoding || (!inputValue.trim() && !selectedLocation)}
             style={{
               width:"100%",
-              background:isGeocoding||(!query.trim()&&!selectedLocation)?GRAY2:BLACK,
-              color:isGeocoding||(!query.trim()&&!selectedLocation)?GRAY1:WHITE,
+              background:isGeocoding||(!inputValue.trim()&&!selectedLocation)?GRAY2:BLACK,
+              color:isGeocoding||(!inputValue.trim()&&!selectedLocation)?GRAY1:WHITE,
               border:"none",
               borderRadius:999,
               padding:"15px 0",
               fontSize:15,
               fontWeight:700,
-              cursor:(isGeocoding||(!query.trim()&&!selectedLocation))?"not-allowed":"pointer",
+              cursor:(isGeocoding||(!inputValue.trim()&&!selectedLocation))?"not-allowed":"pointer",
               fontFamily:FONT,
               marginBottom:12
             }}

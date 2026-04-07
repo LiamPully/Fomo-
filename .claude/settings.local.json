@@ -11,7 +11,23 @@
       "Bash(find C:UsersliampProjectshappenings -type f -name *.js -o -name *.jsx -o -name *.ts -o -name *.tsx -o -name *.sql -o -name .env*)",
       "Bash(find C:UsersliampProjectshappeningssrc -type f \\\\\\(-name *.js -o -name *.jsx \\\\\\))",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(npm list:*)",
+      "Bash(vercel deploy:*)",
+      "Bash(start:*)",
+      "Bash(nslookup fomoza.app 8.8.8.8)",
+      "Bash(dig fomoza.app +short)",
+      "Bash(nslookup:*)",
+      "Bash(vercel:*)",
+      "Bash(pkill -f vite)",
+      "Bash(ipconfig /displaydns)",
+      "Bash(ipconfig:*)",
+      "Bash(git checkout:*)",
+      "Bash(git show:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

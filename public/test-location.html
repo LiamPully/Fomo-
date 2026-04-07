@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Search Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #E8783A;
+            margin-bottom: 10px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #E8783A;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            min-height: 100px;
+        }
+        .result-item {
+            padding: 12px;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .result-item:hover {
+            border-color: #E8783A;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .result-item strong {
+            color: #E8783A;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .result-item small {
+            color: #666;
+        }
+        .loading {
+            color: #888;
+            font-style: italic;
+        }
+        .error {
+            color: #e74c3c;
+            background: #fee;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #e74c3c;
+        }
+        .success {
+            color: #27ae60;
+            background: #efe;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #27ae60;
+        }
+        .place-details {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .place-details h3 {
+            margin-top: 0;
+            color: #2980b9;
+        }
+        button {
+            background: #E8783A;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background: #d66a2f;
+        }
+        .api-status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .api-status.ready {
+            background: #d4edda;
+            color: #155724;
+        }
+        .api-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .debug-log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .debug-log .timestamp {
+            color: #858585;
+        }
+        .debug-log .info {
+            color: #4fc1ff;
+        }
+        .debug-log .success {
+            color: #89d185;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+        .debug-log .error {
+            color: #f48771;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+        .debug-log pre {
+            margin: 5px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .fix-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+        }
+        .fix-box h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .fix-box ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .fix-box li {
+            margin: 8px 0;
+            color: #856404;
+        }
+        .fix-box code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Location Search Test</h1>
+
+        <p>Testing Google Places API integration with debug logging</p>
+
+        <div id="apiStatus" class="api-status loading">
+            Checking API configuration...
+        </div>
+
+        <div class="input-group">
+            <label for="searchInput">Search for a location (type at least 3 characters):</label>
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Type a city, suburb, or address..."
+                autocomplete="off"
+            />
+        </div>
+
+        <div id="results" class="results" style="display: none;">
+            <div class="loading">Start typing to search...</div>
+        </div>
+
+        <div id="placeDetails" style="display: none;"></div>
+
+        <div id="fixBox" class="fix-box" style="display: none;">
+            <h3>🔧 API Key Issue Detected</h3>
+            <p>The API key is being denied. This usually means:</p>
+            <ol>
+                <li>The API key has <strong>HTTP referrer restrictions</strong></li>
+                <li>The key doesn't have <strong>Places API</strong> enabled</li>
+                <li>The key doesn't have <strong>Geocoding API</strong> enabled</li>
+            </ol>
+            <p><strong>To fix:</strong></p>
+            <ol>
+                <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a></li>
+                <li>Find your API key and click "Edit"</li>
+                <li>Under "Application restrictions":
+                    <ul>
+                        <li>Add <code>http://localhost:3001/*</code> to allowed referrers</li>
+                        <li>Or select "None" for testing (not recommended for production)</li>
+                    </ul>
+                </li>
+                <li>Under "API restrictions", enable:
+                    <ul>
+                        <li>Places API</li>
+                        <li>Geocoding API</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="debug-log" id="debugLog">
+            <div class="timestamp">[System]</div> Debug log initialized...
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <h3>Test Cases:</h3>
+            <ul>
+                <li><strong>Cape Town</strong> - Major city</li>
+                <li><strong>V&A Waterfront</strong> - Popular venue</li>
+                <li><strong>Woodstock</strong> - Suburb</li>
+                <li><strong>Gardens, Cape Town</strong> - Specific area</li>
+                <li><strong>Johannesburg</strong> - Different city</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // API Key from your .env file
+        const GOOGLE_PLACES_API_KEY = 'AIzaSyBaAvjO1XpOHlt-Pq_FSGnmFzDme210kMM';
+        let apiDeniedCount = 0;
+
+        // Debug logger
+        function log(message, type = 'info') {
+            const debugLog = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="${type}">${message}</span>`;
+            debugLog.appendChild(entry);
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        // Check API key
+        const apiStatus = document.getElementById('apiStatus');
+        if (GOOGLE_PLACES_API_KEY && !GOOGLE_PLACES_API_KEY.includes('your_key')) {
+            apiStatus.className = 'api-status ready';
+            apiStatus.textContent = '✅ API Key configured';
+            log('API Key configured: ' + GOOGLE_PLACES_API_KEY.substring(0, 15) + '...', 'success');
+        } else {
+            apiStatus.className = 'api-status error';
+            apiStatus.textContent = '❌ API Key not configured';
+            log('API Key not found!', 'error');
+        }
+
+        // Search places function (via proxy)
+        async function searchPlaces(query) {
+            log(`Searching for: "${query}"`, 'info');
+
+            try {
+                const url = `/api/places/autocomplete/json?input=${encodeURIComponent(
+                    query
+                )}&components=country:za&key=${GOOGLE_PLACES_API_KEY}`;
+
+                log(`Fetching via proxy: ${url}`, 'info');
+
+                const response = await fetch(url);
+
+                log(`Response status: ${response.status}`, response.ok ? 'success' : 'error');
+
+                const text = await response.text();
+                log(`Response length: ${text.length} chars`, 'info');
+
+                if (!text) {
+                    log('Empty response received!', 'error');
+                    return { predictions: [], error: 'Empty response' };
+                }
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    log(`JSON parse error: ${e.message}`, 'error');
+                    log(`Raw response: ${text.substring(0, 200)}`, 'error');
+                    return { predictions: [], error: 'Invalid JSON response' };
+                }
+
+                log(`API Status: ${data.status}`, data.status === 'OK' ? 'success' : 'error');
+
+                if (data.error_message) {
+                    log(`API Error Message: ${data.error_message}`, 'error');
+                }
+
+                if (data.status === 'OK') {
+                    log(`Found ${data.predictions.length} predictions`, 'success');
+                    if (data.predictions.length > 0) {
+                        log(`First result: ${data.predictions[0].description}`, 'info');
+                    }
+                    return { predictions: data.predictions, error: null };
+                } else if (data.status === 'ZERO_RESULTS') {
+                    log('No results found', 'info');
+                    return { predictions: [], error: null };
+                } else if (data.status === 'REQUEST_DENIED') {
+                    apiDeniedCount++;
+                    log(`REQUEST_DENIED - API Key issue #${apiDeniedCount}`, 'error');
+                    if (apiDeniedCount >= 1) {
+                        document.getElementById('fixBox').style.display = 'block';
+                    }
+                    return { predictions: [], error: data.status, errorMessage: data.error_message };
+                } else {
+                    log(`Error: ${data.status} - ${data.error_message || ''}`, 'error');
+                    return { predictions: [], error: data.status };
+                }
+            } catch (error) {
+                log(`Exception: ${error.message}`, 'error');
+                return { predictions: [], error: error.message };
+            }
+        }
+
+        // Get place details (via proxy)
+        async function getPlaceDetails(placeId) {
+            log(`Getting details for place: ${placeId.substring(0, 20)}...`, 'info');
+
+            try {
+                const response = await fetch(
+                    `/api/places/details/json?place_id=${placeId}&fields=geometry,name,formatted_address&key=${GOOGLE_PLACES_API_KEY}`
+                );
+
+                const data = await response.json();
+
+                if (data.status === 'OK') {
+                    log('Place details retrieved successfully', 'success');
+                    return {
+                        details: {
+                            name: data.result.name,
+                            address: data.result.formatted_address,
+                            location: data.result.geometry.location
+                        },
+                        error: null
+                    };
+                } else if (data.status === 'REQUEST_DENIED') {
+                    log(`Place details denied: ${data.error_message || 'API Key issue'}`, 'error');
+                    return { details: null, error: data.status, errorMessage: data.error_message };
+                } else {
+                    log(`Details error: ${data.status}`, 'error');
+                    return { details: null, error: data.status };
+                }
+            } catch (error) {
+                log(`Details exception: ${error.message}`, 'error');
+                return { details: null, error: error.message };
+            }
+        }
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Handle search
+        const searchInput = document.getElementById('searchInput');
+        const resultsDiv = document.getElementById('results');
+        const placeDetailsDiv = document.getElementById('placeDetails');
+
+        const handleSearch = debounce(async (query) => {
+            log(`--- Search triggered for: "${query}" ---`, 'info');
+
+            if (!query || query.length < 3) {
+                log('Query too short (need 3+ chars), clearing results', 'info');
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = '<div class="loading">Searching...</div>';
+            placeDetailsDiv.style.display = 'none';
+
+            const { predictions, error, errorMessage } = await searchPlaces(query);
+
+            if (error === 'REQUEST_DENIED') {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>API Request Denied</strong><br>
+                        ${errorMessage || 'The API key is not authorized for this request.'}<br><br>
+                        Check the "🔧 API Key Issue Detected" box below for fix instructions.
+                    </div>
+                `;
+                return;
+            }
+
+            if (error) {
+                resultsDiv.innerHTML = `<div class="error">Error: ${error}</div>`;
+                return;
+            }
+
+            if (predictions.length === 0) {
+                resultsDiv.innerHTML = '<div class="loading">No results found</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = predictions.map((p, i) => `
+                <div class="result-item" data-place-id="${p.place_id}" data-index="${i}">
+                    <strong>${p.structured_formatting?.main_text || p.description}</strong>
+                    <small>${p.structured_formatting?.secondary_text || ''}</small>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.result-item').forEach(item => {
+                item.addEventListener('click', async () => {
+                    const placeId = item.dataset.placeId;
+                    const index = item.dataset.index;
+                    const name = item.querySelector('strong').textContent;
+
+                    log(`Selected result #${parseInt(index) + 1}: ${name}`, 'info');
+
+                    placeDetailsDiv.style.display = 'block';
+                    placeDetailsDiv.innerHTML = '<div class="loading">Loading details...</div>';
+
+                    const { details, error, errorMessage } = await getPlaceDetails(placeId);
+
+                    if (error === 'REQUEST_DENIED') {
+                        placeDetailsDiv.innerHTML = `
+                            <div class="error">
+                                <strong>Cannot get coordinates</strong><br>
+                                ${errorMessage || 'API key is restricted. See fix instructions below.'}
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    if (error || !details) {
+                        placeDetailsDiv.innerHTML = `<div class="error">Failed to load details: ${error}</div>`;
+                        return;
+                    }
+
+                    placeDetailsDiv.innerHTML = `
+                        <div class="place-details">
+                            <h3>📍 Place Details</h3>
+                            <p><strong>Name:</strong> ${details.name}</p>
+                            <p><strong>Address:</strong> ${details.address}</p>
+                            <p><strong>Coordinates:</strong> ${details.location.lat}, ${details.location.lng}</p>
+                        </div>
+                    `;
+                });
+            });
+        }, 300);
+
+        searchInput.addEventListener('input', (e) => {
+            log(`Input changed: "${e.target.value}"`, 'info');
+            handleSearch(e.target.value);
+        });
+
+        // Initial message
+        resultsDiv.innerHTML = '<div class="loading">Type at least 3 characters to search...</div>';
+        resultsDiv.style.display = 'block';
+        log('Page loaded. Ready for input.', 'success');
+    </script>
+</body>
+</html>
