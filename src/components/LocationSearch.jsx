@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, memo } from 'react';
 
 const FONT = "'Sora', system-ui, sans-serif";
 const GRAY1 = "#888880";
 const GRAY2 = "#E4E1DA";
 const GRAY3 = "#F7F5F1";
 const BLACK = "#111111";
-const WHITE = "#FFFFFF";
+const ORANGE = "#E8783A";
 
 // Icon component
 const I = ({ s = 18, c = "currentColor", children }) => (
@@ -17,9 +17,6 @@ const I = ({ s = 18, c = "currentColor", children }) => (
 
 const icons = {
   pin: <I><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></I>,
-  search: <I><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></I>,
-  close: <I><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></I>,
-  nav: <I><polygon points="3 11 22 2 13 21 11 13 3 11"/></I>
 };
 
 const Ico = ({ n, s = 18, c = "currentColor" }) => {
@@ -32,213 +29,154 @@ const Ico = ({ n, s = 18, c = "currentColor" }) => {
   );
 };
 
-export const LocationSearch = ({
-  value,
-  onChange,
-  onSelect,
-  onUseCurrentLocation,
-  predictions = [],
-  loading = false,
-  placeholder = "Search location..."
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showCurrentLocation, setShowCurrentLocation] = useState(true);
+const LocationSearch = memo(({ onSelect }) => {
   const inputRef = useRef(null);
-  const containerRef = useRef(null);
+  const [displayValue, setDisplayValue] = useState("");
+  const [predictions, setPredictions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Close dropdown when clicking outside
+  // Focus input on mount
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    inputRef.current?.focus();
   }, []);
 
-  const handleInputChange = (e) => {
-    onChange(e.target.value);
-    setIsOpen(true);
-    setShowCurrentLocation(e.target.value.length === 0);
-  };
+  // Handle input changes
+  const onChange = useCallback((e) => {
+    const val = e.target.value;
+    setDisplayValue(val);
+    setSelected(null);
+    setError(null);
 
-  const handleSelect = (prediction) => {
-    onSelect(prediction);
-    setIsOpen(false);
-  };
+    // Clear previous search
+    if (window._searchTimeout) clearTimeout(window._searchTimeout);
 
-  const handleUseCurrentLocation = () => {
-    if (onUseCurrentLocation) {
-      onUseCurrentLocation();
-      setIsOpen(false);
+    if (val.length >= 3) {
+      setLoading(true);
+      window._searchTimeout = setTimeout(async () => {
+        try {
+          const { searchPlaces } = await import('../lib/location.js');
+          const result = await searchPlaces(val);
+          setPredictions(result.predictions || []);
+        } catch (err) {
+          setPredictions([]);
+        } finally {
+          setLoading(false);
+        }
+      }, 300);
+    } else {
+      setPredictions([]);
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const clearSearch = () => {
-    onChange('');
-    setShowCurrentLocation(true);
+  const onPredictionClick = useCallback(async (prediction) => {
+    try {
+      const { geocodeAddress } = await import('../lib/location.js');
+      const result = await geocodeAddress(prediction.description);
+      if (result.location) {
+        const loc = {
+          name: prediction.description,
+          lat: result.location.lat,
+          lng: result.location.lng
+        };
+        setSelected(loc);
+        setDisplayValue(prediction.description);
+        setPredictions([]);
+        onSelect(loc);
+      }
+    } catch (err) {
+      setError('Failed to get coordinates');
+    }
+  }, [onSelect]);
+
+  const onContinue = useCallback(async () => {
+    if (selected) {
+      onSelect(selected);
+    } else if (displayValue.trim()) {
+      try {
+        const { geocodeAddress } = await import('../lib/location.js');
+        const result = await geocodeAddress(displayValue);
+        if (result.location) {
+          onSelect({
+            name: displayValue,
+            lat: result.location.lat,
+            lng: result.location.lng
+          });
+        } else {
+          setError('Please select a valid location');
+        }
+      } catch (err) {
+        setError('Failed to validate location');
+      }
+    }
+  }, [selected, displayValue, onSelect]);
+
+  const onClear = useCallback(() => {
+    setSelected(null);
+    setDisplayValue("");
+    setPredictions([]);
     inputRef.current?.focus();
-  };
+  }, []);
 
   return (
-    <div ref={containerRef} style={{ position: "relative", width: "100%" }}>
-      {/* Search Input */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        background: GRAY3,
-        border: `1.5px solid ${isOpen ? BLACK : GRAY2}`,
-        borderRadius: 14,
-        padding: "12px 14px",
-        transition: "border-color 0.2s"
-      }}>
-        <Ico n="search" s={18} c={GRAY1} />
+    <>
+      <div style={{position:"relative",marginBottom:12}}>
         <input
           ref={inputRef}
-          type="text"
-          value={value}
-          onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
-          placeholder={placeholder}
-          style={{
-            flex: 1,
-            border: "none",
-            background: "transparent",
-            fontFamily: FONT,
-            fontSize: 15,
-            outline: "none",
-            color: BLACK
-          }}
+          value={displayValue}
+          onChange={onChange}
+          placeholder="Search for address, street, suburb, or city..."
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          style={{width:"100%",border:`1.5px solid ${error?"#E8783A":GRAY2}`,borderRadius:14,padding:"13px 16px",fontSize:16,outline:"none",fontFamily:FONT,boxSizing:"border-box",background:GRAY3,WebkitAppearance:"none",touchAction:"manipulation"}}
         />
-        {value && (
-          <button
-            onClick={clearSearch}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 4,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}
-          >
-            <Ico n="close" s={16} c={GRAY1} />
-          </button>
+        {loading && (
+          <div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)"}}>
+            <span style={{fontSize:12,color:GRAY1}}>...</span>
+          </div>
         )}
       </div>
 
-      {/* Dropdown */}
-      {isOpen && (
-        <div style={{
-          position: "absolute",
-          top: "100%",
-          left: 0,
-          right: 0,
-          marginTop: 8,
-          background: WHITE,
-          borderRadius: 14,
-          border: `1px solid ${GRAY2}`,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-          zIndex: 100,
-          maxHeight: 300,
-          overflowY: "auto"
-        }}>
-          {/* Use Current Location Option */}
-          {showCurrentLocation && onUseCurrentLocation && (
-            <button
-              onClick={handleUseCurrentLocation}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "14px 16px",
-                background: "none",
-                border: "none",
-                borderBottom: `1px solid ${GRAY2}`,
-                cursor: "pointer",
-                textAlign: "left",
-                fontFamily: FONT,
-                fontSize: 14,
-                color: BLACK
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = GRAY3}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+      {predictions.length > 0 && !selected && (
+        <div style={{background:"#fff",border:`1px solid ${GRAY2}`,borderRadius:12,marginBottom:12,maxHeight:200,overflowY:"auto"}}>
+          {predictions.map((prediction, idx) => (
+            <div
+              key={prediction.place_id || idx}
+              onClick={() => onPredictionClick(prediction)}
+              style={{padding:"12px 16px",borderBottom:`1px solid ${idx < predictions.length - 1 ? GRAY2 : "transparent"}`,cursor:"pointer",fontFamily:FONT,fontSize:14,display:"flex",alignItems:"center",gap:8}}
             >
-              <div style={{
-                width: 36,
-                height: 36,
-                background: "#E8783A20",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0
-              }}>
-                <Ico n="nav" s={18} c="#E8783A" />
-              </div>
-              <div>
-                <p style={{ margin: 0, fontWeight: 600 }}>Use my current location</p>
-                <p style={{ margin: "2px 0 0", fontSize: 12, color: GRAY1 }}>Find events near you</p>
-              </div>
-            </button>
-          )}
-
-          {/* Loading State */}
-          {loading && (
-            <div style={{ padding: 20, textAlign: "center", color: GRAY1, fontFamily: FONT, fontSize: 14 }}>
-              Searching...
+              <Ico n="pin" s={14} c={GRAY1}/>
+              <span>{prediction.description}</span>
             </div>
-          )}
-
-          {/* Predictions */}
-          {!loading && predictions.length > 0 && (
-            <div>
-              {predictions.map((prediction, index) => (
-                <button
-                  key={prediction.place_id || index}
-                  onClick={() => handleSelect(prediction)}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "12px 16px",
-                    background: "none",
-                    border: "none",
-                    borderBottom: index < predictions.length - 1 ? `1px solid ${GRAY2}` : "none",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    fontFamily: FONT,
-                    fontSize: 14,
-                    color: BLACK
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = GRAY3}
-                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                >
-                  <Ico n="pin" s={16} c={GRAY1} />
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {prediction.description}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* No Results */}
-          {!loading && !showCurrentLocation && predictions.length === 0 && value.length >= 3 && (
-            <div style={{ padding: 20, textAlign: "center", color: GRAY1, fontFamily: FONT, fontSize: 14 }}>
-              No locations found
-            </div>
-          )}
+          ))}
         </div>
       )}
-    </div>
+
+      {selected && (
+        <div style={{background:"#E8783A15",border:`1px solid ${ORANGE}`,borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+          <Ico n="pin" s={14} c={ORANGE}/>
+          <span style={{fontFamily:FONT,fontSize:13,color:BLACK,flex:1}}>{selected.name}</span>
+          <button onClick={onClear} style={{background:"none",border:"none",color:GRAY1,cursor:"pointer",fontSize:12}}>Change</button>
+        </div>
+      )}
+
+      {error && (
+        <div style={{color:"#E8783A",fontSize:13,marginBottom:12,fontFamily:FONT,textAlign:"center"}}>{error}</div>
+      )}
+
+      <button
+        onClick={onContinue}
+        disabled={!displayValue.trim() && !selected}
+        style={{width:"100%",background:(!displayValue.trim()&&!selected)?GRAY2:BLACK,color:(!displayValue.trim()&&!selected)?GRAY1:WHITE,border:"none",borderRadius:999,padding:"15px 0",fontSize:15,fontWeight:700,cursor:(!displayValue.trim()&&!selected)?"not-allowed":"pointer",fontFamily:FONT,marginBottom:12}}
+      >
+        Continue
+      </button>
+    </>
   );
-};
+});
 
 export default LocationSearch;

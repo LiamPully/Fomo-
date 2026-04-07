@@ -9,6 +9,7 @@ import CategoryDropdown from "./components/CategoryDropdown";
 import FilterModal from "./components/FilterModal";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 import { SkeletonList } from "./components/SkeletonCard";
+import LocationSearch from "./components/LocationSearch";
 
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS  (extracted frame-by-frame from the video)
@@ -236,58 +237,174 @@ const Ico = ({n,s=18,c="currentColor"}) => {
 const SIco = ({n,s,c}) => <Ico n={n} s={s} c={c}/>;
 
 /* ─────────────────────────────────────────────────────────────
-   LOCATION MODAL  (bottom sheet) - with Google Places autocomplete
+   ISOLATED SEARCH INPUT - Won't re-render when predictions change
 ───────────────────────────────────────────────────────────── */
-const LocationModal = ({open,onAllow,onManual,onSkip}) => {
-  const [showM,setShowM]=useState(false);
-  const [selectedLocation,setSelectedLocation]=useState(null);
-  const [isGeocoding,setIsGeocoding]=useState(false);
-  const [geocodeError,setGeocodeError]=useState(null);
-
-  // Local input value - stable, no re-renders from parent
-  const [inputValue, setInputValue] = useState("");
+const SearchInput = memo(({ onSelect, initialError }) => {
+  const inputRef = useRef(null);
+  const [displayValue, setDisplayValue] = useState("");
   const [predictions, setPredictions] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [error, setError] = useState(initialError);
 
-  // Reset state when modal opens
-  useEffect(()=>{
-    if(open){
-      setShowM(false);
-      setSelectedLocation(null);
-      setIsGeocoding(false);
-      setGeocodeError(null);
-      setInputValue("");
-      setPredictions([]);
-    }
-  },[open]);
+  // Focus input on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
-  // Stable input handler - no extra state updates that cause re-render
-  const handleInputChange = useCallback((e) => {
+  // Handle input changes without re-rendering parent
+  const onChange = useCallback((e) => {
     const val = e.target.value;
-    setInputValue(val);
-    setSelectedLocation(null);
+    setDisplayValue(val);
+    setSelected(null);
+    setError(null);
 
-    // Debounced search
-    if (window.searchTimeout) clearTimeout(window.searchTimeout);
+    // Clear previous search
+    if (window._searchTimeout) clearTimeout(window._searchTimeout);
+
     if (val.length >= 3) {
-      setSearchLoading(true);
-      window.searchTimeout = setTimeout(async () => {
+      setLoading(true);
+      window._searchTimeout = setTimeout(async () => {
         try {
           const { searchPlaces } = await import('./lib/location.js');
           const result = await searchPlaces(val);
           setPredictions(result.predictions || []);
         } catch (err) {
-          console.error('Search failed:', err);
           setPredictions([]);
         } finally {
-          setSearchLoading(false);
+          setLoading(false);
         }
       }, 300);
     } else {
       setPredictions([]);
-      setSearchLoading(false);
+      setLoading(false);
     }
   }, []);
+
+  const onPredictionClick = useCallback(async (prediction) => {
+    try {
+      const { geocodeAddress } = await import('./lib/location.js');
+      const result = await geocodeAddress(prediction.description);
+      if (result.location) {
+        const loc = {
+          name: prediction.description,
+          lat: result.location.lat,
+          lng: result.location.lng
+        };
+        setSelected(loc);
+        setDisplayValue(prediction.description);
+        setPredictions([]);
+        onSelect(loc);
+      }
+    } catch (err) {
+      setError('Failed to get coordinates');
+    }
+  }, [onSelect]);
+
+  const onContinue = useCallback(async () => {
+    if (selected) {
+      onSelect(selected);
+    } else if (displayValue.trim()) {
+      try {
+        const { geocodeAddress } = await import('./lib/location.js');
+        const result = await geocodeAddress(displayValue);
+        if (result.location) {
+          onSelect({
+            name: displayValue,
+            lat: result.location.lat,
+            lng: result.location.lng
+          });
+        } else {
+          setError('Please select a valid location');
+        }
+      } catch (err) {
+        setError('Failed to validate location');
+      }
+    }
+  }, [selected, displayValue, onSelect]);
+
+  const onClear = useCallback(() => {
+    setSelected(null);
+    setDisplayValue("");
+    setPredictions([]);
+    inputRef.current?.focus();
+  }, []);
+
+  return (
+    <>
+      <div style={{position:"relative",marginBottom:12}}>
+        <input
+          ref={inputRef}
+          value={displayValue}
+          onChange={onChange}
+          placeholder="Search for address, street, suburb, or city..."
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          style={{width:"100%",border:`1.5px solid ${error?"#E8783A":GRAY2}`,borderRadius:14,padding:"13px 16px",fontSize:16,outline:"none",fontFamily:FONT,boxSizing:"border-box",background:GRAY3,WebkitAppearance:"none",touchAction:"manipulation"}}
+        />
+        {loading && (
+          <div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)"}}>
+            <span style={{fontSize:12,color:GRAY1}}>...</span>
+          </div>
+        )}
+      </div>
+
+      {predictions.length > 0 && !selected && (
+        <div style={{background:WHITE,border:`1px solid ${GRAY2}`,borderRadius:12,marginBottom:12,maxHeight:200,overflowY:"auto"}}>
+          {predictions.map((prediction, idx) => (
+            <div
+              key={prediction.place_id || idx}
+              onClick={() => onPredictionClick(prediction)}
+              style={{padding:"12px 16px",borderBottom:`1px solid ${idx < predictions.length - 1 ? GRAY2 : "transparent"}`,cursor:"pointer",fontFamily:FONT,fontSize:14,display:"flex",alignItems:"center",gap:8}}
+            >
+              <Ico n="pin" s={14} c={GRAY1}/>
+              <span>{prediction.description}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selected && (
+        <div style={{background:"#E8783A15",border:`1px solid ${ORANGE}`,borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+          <Ico n="pin" s={14} c={ORANGE}/>
+          <span style={{fontFamily:FONT,fontSize:13,color:BLACK,flex:1}}>{selected.name}</span>
+          <button onClick={onClear} style={{background:"none",border:"none",color:GRAY1,cursor:"pointer",fontSize:12}}>Change</button>
+        </div>
+      )}
+
+      {error && (
+        <div style={{color:"#E8783A",fontSize:13,marginBottom:12,fontFamily:FONT,textAlign:"center"}}>{error}</div>
+      )}
+
+      <button
+        onClick={onContinue}
+        disabled={!displayValue.trim() && !selected}
+        style={{width:"100%",background:(!displayValue.trim()&&!selected)?GRAY2:BLACK,color:(!displayValue.trim()&&!selected)?GRAY1:WHITE,border:"none",borderRadius:999,padding:"15px 0",fontSize:15,fontWeight:700,cursor:(!displayValue.trim()&&!selected)?"not-allowed":"pointer",fontFamily:FONT,marginBottom:12}}
+      >
+        Continue
+      </button>
+    </>
+  );
+});
+
+/* ─────────────────────────────────────────────────────────────
+   LOCATION MODAL  (bottom sheet) - with Google Places autocomplete
+───────────────────────────────────────────────────────────── */
+const LocationModal = ({open,onAllow,onManual,onSkip}) => {
+  const [showM,setShowM]=useState(false);
+
+  // Reset state when modal opens
+  useEffect(()=>{
+    if(open){
+      setShowM(false);
+    }
+  },[open]);
+
+  const handleSelect = useCallback((loc) =>{
+    onManual(loc);
+  },[onManual]);
 
   const handlePredictionSelect = async (prediction) => {
     setIsGeocoding(true);
@@ -366,94 +483,8 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
             Skip for now
           </button>
         </>) : (<>
-          <div style={{position:"relative",marginBottom:12}} onClick={(e)=>e.stopPropagation()}>
-            <input
-              value={inputValue}
-              onChange={handleInputChange}
-              placeholder="Search for address, street, suburb, or city..."
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-              onBlur={(e)=>{e.preventDefault(); e.stopPropagation();}}
-              style={{width:"100%",border:`1.5px solid ${geocodeError?"#E8783A":GRAY2}`,borderRadius:14,padding:"13px 16px",fontSize:16,outline:"none",fontFamily:FONT,boxSizing:"border-box",background:GRAY3,WebkitAppearance:"none",touchAction:"manipulation"}}
-            />
-            {searchLoading && (
-              <div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)"}}>
-                <span style={{fontSize:12,color:GRAY1}}>Searching...</span>
-              </div>
-            )}
-          </div>
-
-          {/* Predictions dropdown */}
-          {predictions.length > 0 && !selectedLocation && (
-            <div style={{background:WHITE,border:`1px solid ${GRAY2}`,borderRadius:12,marginBottom:12,maxHeight:200,overflowY:"auto"}}>
-              {predictions.map((prediction, idx) => (
-                <button
-                  key={prediction.place_id || idx}
-                  onClick={()=>handlePredictionSelect(prediction)}
-                  style={{
-                    width:"100%",
-                    textAlign:"left",
-                    padding:"12px 16px",
-                    background:"none",
-                    border:"none",
-                    borderBottom:`1px solid ${idx < predictions.length - 1 ? GRAY2 : "transparent"}`,
-                    cursor:"pointer",
-                    fontFamily:FONT,
-                    fontSize:14
-                  }}
-                >
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <Ico n="pin" s={14} c={GRAY1}/>
-                    <span>{prediction.description}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Selected location indicator */}
-          {selectedLocation && (
-            <div style={{background:"#E8783A15",border:`1px solid ${ORANGE}`,borderRadius:12,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
-              <Ico n="pin" s={14} c={ORANGE}/>
-              <span style={{fontFamily:FONT,fontSize:13,color:BLACK,flex:1}}>{selectedLocation.name}</span>
-              <button
-                onClick={()=>{setSelectedLocation(null);setInputValue("");}}
-                style={{background:"none",border:"none",color:GRAY1,cursor:"pointer",fontSize:12}}
-              >
-                Change
-              </button>
-            </div>
-          )}
-
-          {/* Error message */}
-          {geocodeError && (
-            <div style={{color:"#E8783A",fontSize:13,marginBottom:12,fontFamily:FONT,textAlign:"center"}}>
-              {geocodeError}
-            </div>
-          )}
-
-          <button
-            onClick={handleContinue}
-            disabled={isGeocoding || (!inputValue.trim() && !selectedLocation)}
-            style={{
-              width:"100%",
-              background:isGeocoding||(!inputValue.trim()&&!selectedLocation)?GRAY2:BLACK,
-              color:isGeocoding||(!inputValue.trim()&&!selectedLocation)?GRAY1:WHITE,
-              border:"none",
-              borderRadius:999,
-              padding:"15px 0",
-              fontSize:15,
-              fontWeight:700,
-              cursor:(isGeocoding||(!inputValue.trim()&&!selectedLocation))?"not-allowed":"pointer",
-              fontFamily:FONT,
-              marginBottom:12
-            }}
-          >
-            {isGeocoding ? "Validating location..." : "Continue"}
-          </button>
-          <button onClick={()=>setShowM(false)} style={{width:"100%",background:"none",border:"none",color:GRAY1,fontSize:14,cursor:"pointer",fontFamily:FONT}}>
+          <LocationSearch onSelect={(loc) => onManual(loc)} />
+          <button onClick={()=>setShowM(false)} style={{width:"100%",background:"none",border:"none",color:GRAY1,fontSize:14,cursor:"pointer",fontFamily:FONT,marginTop:12}}>
             ← Back
           </button>
         </>)}
@@ -461,6 +492,8 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
     </div>
   );
 };
+
+// LocationSearch component handles the input separately to prevent keyboard issues
 const MemoizedLocationModal = memo(LocationModal);
 
 /* ─────────────────────────────────────────────────────────────
