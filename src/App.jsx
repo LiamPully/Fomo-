@@ -314,8 +314,8 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
 
   if (!open) return null;
   return (
-    <div style={{position:"absolute",inset:0,zIndex:80,background:"rgba(0,0,0,0.45)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-      <div style={{background:WHITE,borderRadius:"22px 22px 0 0",padding:"28px 20px 44px",animation:"slideUp .3s ease",maxHeight:"80vh",overflowY:"auto"}}>
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:80,background:"rgba(0,0,0,0.45)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+      <div style={{background:WHITE,borderRadius:"22px 22px 0 0",padding:"28px 20px max(44px, env(safe-area-inset-bottom))",animation:"slideUp .3s ease",maxHeight:"70vh",overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
         {/* Pin icon */}
         <div style={{width:52,height:52,background:GRAY3,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px"}}>
           <span style={{color:BLACK}}><Ico n="pin" s={24} c={BLACK}/></span>
@@ -340,7 +340,6 @@ const LocationModal = ({open,onAllow,onManual,onSkip}) => {
               value={query}
               onChange={e=>{setQuery(e.target.value);setSelectedLocation(null);}}
               placeholder="Search for address, street, suburb, or city..."
-              autoFocus
               style={{width:"100%",border:`1.5px solid ${geocodeError?"#E8783A":GRAY2}`,borderRadius:14,padding:"13px 16px",fontSize:15,outline:"none",fontFamily:FONT,boxSizing:"border-box",background:GRAY3}}
             />
             {searchLoading && (
