@@ -27,7 +27,10 @@
       "Bash(ipconfig:*)",
       "Bash(git checkout:*)",
       "Bash(git show:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Skill(update-config)",
+      "Bash(claude skill:*)",
+      "Bash(claude plugin:*)"
     ]
   }
 }

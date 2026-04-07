@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, memo, Suspense } from "react";
 import { useLocation } from "./hooks/useLocation";
 import { useAuth } from "./hooks/useAuth";
 import { MAIN_CATEGORIES, TOP_LEVEL_CATEGORIES, SUB_CATEGORIES, getCategoryColor } from "./lib/categories";
@@ -10,6 +10,10 @@ import FilterModal from "./components/FilterModal";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 import { SkeletonList } from "./components/SkeletonCard";
 import LocationSearch from "./components/LocationSearch";
+import AuthModal from "./components/AuthModal";
+import CreateEvent from "./components/CreateEvent";
+import ErrorBoundary from "./components/ErrorBoundary";
+import "./styles/design-system.css";
 
 /* ─────────────────────────────────────────────────────────────
    DESIGN TOKENS  (extracted frame-by-frame from the video)
@@ -958,174 +962,6 @@ const AboutScreen = ({onSignUp}) => (
   </div>
 );
 
-/* ─────────────────────────────────────────────────────────────
-   AUTH MODAL  (bottom sheet) - Real Supabase Auth
-───────────────────────────────────────────────────────────── */
-const AuthModal = ({open,onClose,onLogin,onRegister,error:authError,clearError}) => {
-  const [mode,setMode]=useState("login");
-  const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [name,setName]=useState("");
-  const [loading,setLoading]=useState(false);
-  const [localError,setLocalError]=useState(null);
-
-  // Clear errors when modal opens/closes or mode changes
-  useEffect(()=>{
-    setLocalError(null);
-    if(clearError) clearError();
-  },[open,mode,clearError]);
-
-  if (!open) return null;
-
-  const Inp=({val,set,ph,t="text"})=>(
-    <input value={val} onChange={e=>set(e.target.value)} type={t} placeholder={ph}
-      style={{width:"100%",border:`1.5px solid ${GRAY2}`,borderRadius:14,padding:"13px 15px",fontSize:15,marginBottom:12,outline:"none",background:GRAY3,fontFamily:FONT,boxSizing:"border-box"}}
-      onFocus={e=>e.target.style.borderColor=BLACK} onBlur={e=>e.target.style.borderColor=GRAY2}/>
-  );
-
-  const submit=async()=>{
-    setLocalError(null);
-    if(clearError) clearError();
-
-    // Validation
-    if(!email||!pass){
-      setLocalError("Please enter both email and password");
-      return;
-    }
-    if(mode==="register" && !name){
-      setLocalError("Please enter your business name");
-      return;
-    }
-
-    setLoading(true);
-    try{
-      if(mode==="login"){
-        await onLogin(email,pass);
-      }else{
-        await onRegister(email,pass,name);
-      }
-    }catch(err){
-      setLocalError(err.message || "An error occurred. Please try again.");
-    }finally{
-      setLoading(false);
-    }
-  };
-
-  const displayError = localError || authError;
-
-  return (
-    <div style={{position:"absolute",inset:0,zIndex:90,background:"rgba(0,0,0,0.5)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}
-      onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:WHITE,borderRadius:"22px 22px 0 0",padding:"28px 20px 44px",animation:"slideUp .25s ease"}}>
-        <h2 style={{fontFamily:FONT,fontSize:22,fontWeight:800,color:BLACK,marginBottom:6}}>{mode==="login"?"Welcome back":"Create account"}</h2>
-        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,marginBottom:22}}>{mode==="login"?"Sign in to your Account.":"Join to publish local events."}</p>
-
-        {displayError&&(
-          <div style={{background:"#FEE2E2",border:"1px solid #FECACA",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
-            <p style={{fontFamily:FONT,fontSize:13,color:"#DC2626",margin:0}}>{displayError}</p>
-          </div>
-        )}
-
-        {mode==="register"&&<Inp val={name} set={setName} ph="Business name"/>}
-        <Inp val={email} set={setEmail} ph="Email address" t="email"/>
-        <Inp val={pass}  set={setPass}  ph="Password"      t="password"/>
-
-        <button onClick={submit} disabled={loading}
-          style={{width:"100%",background:BLACK,color:WHITE,border:"none",borderRadius:999,padding:15,fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FONT,marginBottom:14,opacity:loading?.7:1}}>
-          {loading?"…":mode==="login"?"Sign in":"Create account"}
-        </button>
-        <p style={{textAlign:"center",fontFamily:FONT,fontSize:13,color:GRAY1}}>
-          {mode==="login"?"No account? ":"Already have one? "}
-          <button onClick={()=>setMode(mode==="login"?"register":"login")}
-            style={{background:"none",border:"none",color:BLACK,fontWeight:700,cursor:"pointer",fontSize:13,fontFamily:FONT}}>
-            {mode==="login"?"Sign up":"Sign in"}
-          </button>
-        </p>
-      </div>
-    </div>
-  );
-};
-
-/* ─────────────────────────────────────────────────────────────
-   CREATE EVENT
-───────────────────────────────────────────────────────────── */
-const CreateEvent = ({user,onSave,onBack}) => {
-  const [f,setF]=useState({title:"",desc:"",cat:"business",subCat:"",start:"",end:"",venue:"",area:"",phone:"",wa:"",web:"",ig:""});
-  const [showSubCats,setShowSubCats]=useState(false);
-  const set=(k,v)=>setF(p=>({...p,[k]:v}));
-
-  const handleCatChange=(catId)=>{
-    set("cat",catId);
-    set("subCat","");
-    setShowSubCats(catId==="other");
-  };
-
-  const Lbl=({c})=><label style={{fontFamily:FONT,fontSize:11,fontWeight:700,color:GRAY1,letterSpacing:"0.7px",textTransform:"uppercase",display:"block",marginBottom:6}}>{c}</label>;
-  const Inp=({k,ph,t="text"})=>(
-    <input value={f[k]} onChange={e=>set(k,e.target.value)} type={t} placeholder={ph}
-      style={{width:"100%",border:`1.5px solid ${GRAY2}`,borderRadius:12,padding:"12px 14px",fontSize:14,outline:"none",background:GRAY3,fontFamily:FONT,marginBottom:18,boxSizing:"border-box"}}
-      onFocus={e=>e.target.style.borderColor=BLACK} onBlur={e=>e.target.style.borderColor=GRAY2}/>
-  );
-  return (
-    <div style={{background:WHITE,height:"100%",overflowY:"auto"}}>
-      <div style={{padding:"16px 16px 100px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:28}}>
-          <button onClick={onBack} style={{background:GRAY3,border:"none",borderRadius:"50%",width:38,height:38,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <Ico n="back" s={18} c={BLACK}/>
-          </button>
-          <h1 style={{fontFamily:FONT,fontSize:22,fontWeight:800,color:BLACK}}>Create event</h1>
-        </div>
-        <Lbl c="Event title *"/><Inp k="title" ph="e.g. Saturday Morning Market"/>
-        <Lbl c="Description *"/>
-        <textarea value={f.desc} onChange={e=>set("desc",e.target.value)} placeholder="Tell people what to expect…" rows={4}
-          style={{width:"100%",border:`1.5px solid ${GRAY2}`,borderRadius:12,padding:"12px 14px",fontSize:14,outline:"none",background:GRAY3,fontFamily:FONT,marginBottom:18,resize:"vertical",boxSizing:"border-box"}}
-          onFocus={e=>e.target.style.borderColor=BLACK} onBlur={e=>e.target.style.borderColor=GRAY2}/>
-        <Lbl c="Category *"/>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
-          {TOP_LEVEL_CATEGORIES.filter(c=>c.id!=="all").map(c=>(
-            <button key={c.id} onClick={()=>handleCatChange(c.id)}
-              style={{border:`1.5px solid ${f.cat===c.id?c.color:GRAY2}`,background:f.cat===c.id?c.color:WHITE,color:f.cat===c.id?WHITE:BLACK,borderRadius:999,padding:"8px 14px",fontSize:12,fontWeight:f.cat===c.id?700:400,cursor:"pointer",fontFamily:FONT}}>
-              {c.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Subcategory selector - shown when Other is selected */}
-        {showSubCats&&(
-          <div style={{marginBottom:20,padding:16,background:GRAY3,borderRadius:12}}>
-            <p style={{fontFamily:FONT,fontSize:12,fontWeight:700,color:GRAY1,marginBottom:10}}>Select a more specific category:</p>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {SUB_CATEGORIES.map(c=>(
-                <button key={c.id} onClick={()=>set("subCat",c.id)}
-                  style={{border:`1.5px solid ${f.subCat===c.id?c.color:GRAY2}`,background:f.subCat===c.id?c.color:WHITE,color:f.subCat===c.id?WHITE:BLACK,borderRadius:999,padding:"6px 12px",fontSize:11,fontWeight:f.subCat===c.id?700:400,cursor:"pointer",fontFamily:FONT}}>
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          <div><Lbl c="Start *"/><input value={f.start} onChange={e=>set("start",e.target.value)} type="datetime-local" style={{width:"100%",border:`1.5px solid ${GRAY2}`,borderRadius:12,padding:"12px 10px",fontSize:12,outline:"none",background:GRAY3,fontFamily:FONT,marginBottom:18,boxSizing:"border-box"}}/></div>
-          <div><Lbl c="End *"/><input value={f.end} onChange={e=>set("end",e.target.value)} type="datetime-local" style={{width:"100%",border:`1.5px solid ${GRAY2}`,borderRadius:12,padding:"12px 10px",fontSize:12,outline:"none",background:GRAY3,fontFamily:FONT,marginBottom:18,boxSizing:"border-box"}}/></div>
-        </div>
-        <Lbl c="Venue"/><Inp k="venue" ph="e.g. The Old Biscuit Mill"/>
-        <Lbl c="Area / City *"/><Inp k="area" ph="e.g. Woodstock, Cape Town"/>
-        <Lbl c="Phone"/><Inp k="phone" ph="+27 82 000 0000"/>
-        <Lbl c="WhatsApp"/><Inp k="wa" ph="+27 82 000 0000"/>
-        <Lbl c="Website"/><Inp k="web" ph="yoursite.co.za"/>
-        <Lbl c="Instagram"/><Inp k="ig" ph="@yourbusiness"/>
-        <div style={{display:"flex",gap:12}}>
-          <button onClick={()=>onSave({...f,status:"draft"})}
-            style={{flex:1,background:GRAY3,color:BLACK,border:"none",borderRadius:999,padding:14,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:FONT}}>
-            Save draft
-          </button>
-          <button onClick={()=>onSave({...f,status:"published"})}
-            style={{flex:2,background:BLACK,color:WHITE,border:"none",borderRadius:999,padding:14,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>
-            Publish event
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 /* ─────────────────────────────────────────────────────────────
    MY EVENTS
@@ -1427,6 +1263,7 @@ export default function App() {
   }:null;
 
   return (
+    <ErrorBoundary>
     <div className="app-container" style={{width:"100%",maxWidth:430,margin:"0 auto",height:"100vh",position:"relative",display:"flex",flexDirection:"column",background:BG,overflow:"hidden",fontFamily:FONT,boxShadow:"0 0 40px rgba(0,0,0,0.15)"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800;900&display=swap');
@@ -1498,5 +1335,6 @@ export default function App() {
         />
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
