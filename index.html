@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Silence extension errors before anything else -->
+    <script>(function(){var e=console.error,c=console.warn;console.error=function(){for(var r=0;r<arguments.length;r++){var a=String(arguments[r]);if(a.includes('runtime.lastError')||a.includes('content_script')||a.includes('Sentry')||a.includes('429')||a.includes('insights whitelist')||a.includes('UsernameElement'))return}e.apply(console,arguments)};console.warn=function(){for(var r=0;r<arguments.length;r++){var a=String(arguments[r]);if(a.includes('SES')||a.includes('unpermitted')||a.includes('insights'))return}c.apply(console,arguments)};window.onerror=function(){return!0};window.addEventListener('error',function(e){e.stopPropagation()},!0)})();</script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
 
