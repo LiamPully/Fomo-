@@ -9,6 +9,73 @@ const GRAY1 = '#888880';
 const GRAY3 = '#F7F5F1';
 
 /**
+ * Browser extension error patterns to suppress
+ * These errors come from browser extensions and don't affect app functionality
+ */
+const EXTENSION_ERROR_PATTERNS = [
+  /runtime\.lastError/i,
+  /FrameDoesNotExistError/i,
+  /FrameIsBrowserFrameError/i,
+  /extension/i,
+  /chrome-extension/i,
+  /moz-extension/i,
+  /safari-extension/i,
+  /webframe/i,
+  /Unchecked runtime\.lastError/i,
+];
+
+/**
+ * Check if an error is from a browser extension (not the app)
+ */
+const isExtensionError = (error) => {
+  if (!error) return false;
+
+  const errorString = typeof error === 'string' ? error : error.toString?.() || '';
+  const errorMessage = error.message || errorString;
+
+  // Check against known extension error patterns
+  if (EXTENSION_ERROR_PATTERNS.some(pattern => pattern.test(errorMessage))) {
+    return true;
+  }
+
+  // Check stack trace for extension origins
+  const stack = error.stack || '';
+  if (stack.includes('chrome-extension:') ||
+      stack.includes('moz-extension:') ||
+      stack.includes('safari-extension:') ||
+      stack.includes('extension://')) {
+    return true;
+  }
+
+  return false;
+};
+
+/**
+ * Check if this is a Sentry rate limit error
+ */
+const isSentryRateLimitError = (error) => {
+  if (!error) return false;
+  const errorString = String(error.message || error);
+  return /Sentry.*429/i.test(errorString) ||
+         /sentry.*rate/i.test(errorString) ||
+         /429.*sentry/i.test(errorString);
+};
+
+/**
+ * Safe Sentry capture that checks if Sentry is defined
+ */
+const safeSentryCapture = (error, context) => {
+  if (typeof window !== 'undefined' && window.Sentry && typeof window.Sentry.captureException === 'function') {
+    try {
+      window.Sentry.captureException(error, { extra: context });
+    } catch (sentryError) {
+      // Silently fail if Sentry itself has issues
+      console.debug('[Sentry capture failed]', sentryError);
+    }
+  }
+};
+
+/**
  * ErrorBoundary - Catches JavaScript errors anywhere in the child component tree
  * and displays a fallback UI instead of crashing the entire app.
  */
@@ -18,24 +85,49 @@ class ErrorBoundary extends Component {
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
+      isExtensionError: false
     };
   }
 
   static getDerivedStateFromError(error) {
+    // Check if this is an extension error - if so, don't show fallback UI
+    if (isExtensionError(error)) {
+      console.debug('[ErrorBoundary] Suppressed extension error:', error);
+      return { hasError: false, isExtensionError: true, error };
+    }
+
     // Update state so the next render will show the fallback UI
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error details
+    // Handle extension errors silently
+    if (isExtensionError(error)) {
+      console.debug('[ErrorBoundary] Extension error caught and suppressed:', error, errorInfo);
+      this.setState({ errorInfo, isExtensionError: true });
+
+      // Auto-recover from extension errors after a short delay
+      setTimeout(() => {
+        this.setState({ hasError: false, error: null, errorInfo: null, isExtensionError: false });
+      }, 100);
+      return;
+    }
+
+    // Handle Sentry rate limit errors
+    if (isSentryRateLimitError(error)) {
+      console.debug('[ErrorBoundary] Sentry rate limit error suppressed');
+      this.setState({ errorInfo, isExtensionError: true });
+      return;
+    }
+
+    // Log actual app errors
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     this.setState({ errorInfo });
 
-    // In production, send to error reporting service
+    // In production, send to error reporting service (only for real app errors)
     if (import.meta.env.PROD) {
-      // Example: Sentry, LogRocket, etc.
-      // Sentry.captureException(error, { extra: errorInfo });
+      safeSentryCapture(error, errorInfo);
     }
   }
 
@@ -57,6 +149,11 @@ class ErrorBoundary extends Component {
   };
 
   render() {
+    // If this was just an extension error that's been suppressed, render children normally
+    if (!this.state.hasError && this.state.isExtensionError) {
+      return this.props.children;
+    }
+
     if (this.state.hasError) {
       // Custom fallback UI
       return (

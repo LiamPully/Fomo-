@@ -31,7 +31,22 @@ const createMockClient = () => {
   }
 }
 
-export const supabase = isValidConfig ? createClient(supabaseUrl, supabaseAnonKey) : createMockClient()
+// Create Supabase client with proper headers to avoid 406 errors
+const createSupabaseClient = () => {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    db: {
+      schema: 'public'
+    },
+    global: {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    }
+  });
+};
+
+export const supabase = isValidConfig ? createSupabaseClient() : createMockClient()
 
 // Helper function to get current user
 export const getCurrentUser = async () => {

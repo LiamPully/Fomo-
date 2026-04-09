@@ -21,35 +21,56 @@ export const useFocusTrap = (isActive) => {
 
   useEffect(() => {
     if (isActive) {
-      // Store the currently focused element
-      previouslyFocusedElement.current = document.activeElement;
+      try {
+        // Store the currently focused element
+        previouslyFocusedElement.current = document.activeElement;
 
-      // Focus the first focusable element in the container
-      const focusableElements = getFocusableElements(containerRef.current);
-      if (focusableElements.length > 0) {
-        focusableElements[0].focus();
+        // Focus the first focusable element in the container
+        const focusableElements = getFocusableElements(containerRef.current);
+        if (focusableElements.length > 0) {
+          focusableElements[0].focus();
+        }
+
+        // Add keyboard listener
+        const handleKeyDown = (e) => {
+          try {
+            if (e.key === 'Tab') {
+              handleTabKey(e, containerRef.current);
+            }
+            if (e.key === 'Escape') {
+              // Let parent handle escape
+              return;
+            }
+          } catch (err) {
+            // Suppress extension-related errors
+            if (import.meta.env.DEV) {
+              console.debug('[useFocusTrap] Keyboard handler error:', err);
+            }
+          }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+          // Restore focus when unmounting
+          try {
+            if (previouslyFocusedElement.current) {
+              previouslyFocusedElement.current.focus();
+            }
+          } catch (err) {
+            // Suppress extension-related focus errors
+            if (import.meta.env.DEV) {
+              console.debug('[useFocusTrap] Focus restore error:', err);
+            }
+          }
+        };
+      } catch (err) {
+        // Suppress extension-related errors
+        if (import.meta.env.DEV) {
+          console.debug('[useFocusTrap] Effect error:', err);
+        }
       }
-
-      // Add keyboard listener
-      const handleKeyDown = (e) => {
-        if (e.key === 'Tab') {
-          handleTabKey(e, containerRef.current);
-        }
-        if (e.key === 'Escape') {
-          // Let parent handle escape
-          return;
-        }
-      };
-
-      document.addEventListener('keydown', handleKeyDown);
-
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown);
-        // Restore focus when unmounting
-        if (previouslyFocusedElement.current) {
-          previouslyFocusedElement.current.focus();
-        }
-      };
     }
   }, [isActive]);
 
@@ -107,29 +128,45 @@ const handleTabKey = (e, container) => {
  * @param {string} priority - 'polite' or 'assertive'
  */
 export const announceToScreenReader = (message, priority = 'polite') => {
-  // Create or find live region
-  let liveRegion = document.getElementById(`aria-live-${priority}`);
+  try {
+    // Create or find live region
+    let liveRegion = document.getElementById(`aria-live-${priority}`);
 
-  if (!liveRegion) {
-    liveRegion = document.createElement('div');
-    liveRegion.id = `aria-live-${priority}`;
-    liveRegion.setAttribute('aria-live', priority);
-    liveRegion.setAttribute('aria-atomic', 'true');
-    liveRegion.style.cssText = `
-      position: absolute;
-      left: -10000px;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-    `;
-    document.body.appendChild(liveRegion);
+    if (!liveRegion) {
+      liveRegion = document.createElement('div');
+      liveRegion.id = `aria-live-${priority}`;
+      liveRegion.setAttribute('aria-live', priority);
+      liveRegion.setAttribute('aria-atomic', 'true');
+      liveRegion.style.cssText = `
+        position: absolute;
+        left: -10000px;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+      `;
+      document.body.appendChild(liveRegion);
+    }
+
+    // Clear and set message
+    liveRegion.textContent = '';
+    setTimeout(() => {
+      try {
+        if (liveRegion) {
+          liveRegion.textContent = message;
+        }
+      } catch (err) {
+        // Suppress extension-related errors
+        if (import.meta.env.DEV) {
+          console.debug('[announceToScreenReader] Set message error:', err);
+        }
+      }
+    }, 100);
+  } catch (err) {
+    // Suppress extension-related DOM errors
+    if (import.meta.env.DEV) {
+      console.debug('[announceToScreenReader] Error:', err);
+    }
   }
-
-  // Clear and set message
-  liveRegion.textContent = '';
-  setTimeout(() => {
-    liveRegion.textContent = message;
-  }, 100);
 };
 
 /**
@@ -139,15 +176,38 @@ export const useReducedMotion = () => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(mediaQuery.matches);
+    try {
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      setPrefersReducedMotion(mediaQuery.matches);
 
-    const handleChange = (e) => {
-      setPrefersReducedMotion(e.matches);
-    };
+      const handleChange = (e) => {
+        try {
+          setPrefersReducedMotion(e.matches);
+        } catch (err) {
+          // Suppress extension-related errors
+          if (import.meta.env.DEV) {
+            console.debug('[useReducedMotion] Change handler error:', err);
+          }
+        }
+      };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+      mediaQuery.addEventListener('change', handleChange);
+      return () => {
+        try {
+          mediaQuery.removeEventListener('change', handleChange);
+        } catch (err) {
+          // Suppress extension-related errors
+          if (import.meta.env.DEV) {
+            console.debug('[useReducedMotion] Cleanup error:', err);
+          }
+        }
+      };
+    } catch (err) {
+      // Suppress extension-related errors
+      if (import.meta.env.DEV) {
+        console.debug('[useReducedMotion] Setup error:', err);
+      }
+    }
   }, []);
 
   return prefersReducedMotion;

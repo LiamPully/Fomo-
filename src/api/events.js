@@ -93,7 +93,7 @@ export const fetchEventById = async (id) => {
       .select(`
         *,
         category:categories(name, color),
-        business:businesses(name, email, phone)
+        business:businesses(business_name, email, phone)
       `)
       .eq('id', id)
       .single()

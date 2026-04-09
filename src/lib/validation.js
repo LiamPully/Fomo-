@@ -241,10 +241,10 @@ export const validateBusinessData = (data) => {
   const errors = [];
   const sanitized = {};
 
-  if (!data.name || typeof data.name !== 'string' || data.name.trim().length < 2) {
+  if (!data.business_name || typeof data.business_name !== 'string' || data.business_name.trim().length < 2) {
     errors.push('Business name is required and must be at least 2 characters');
   } else {
-    sanitized.name = data.name.trim().slice(0, 255);
+    sanitized.business_name = data.business_name.trim().slice(0, 255);
   }
 
   if (!data.email) {

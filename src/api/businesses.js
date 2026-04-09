@@ -24,7 +24,7 @@ export const getOrCreateBusiness = async (userId, businessData) => {
       .from('businesses')
       .select('*')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     if (fetchError && fetchError.code !== 'PGRST116') {
       throw fetchError
@@ -93,11 +93,11 @@ export const updateBusiness = async (id, updates) => {
     const sanitized = {};
     const errors = [];
 
-    if (updates.name !== undefined) {
-      if (typeof updates.name !== 'string' || updates.name.trim().length < 2) {
+    if (updates.business_name !== undefined) {
+      if (typeof updates.business_name !== 'string' || updates.business_name.trim().length < 2) {
         errors.push('Business name must be at least 2 characters');
       } else {
-        sanitized.name = updates.name.trim().slice(0, 255);
+        sanitized.business_name = updates.business_name.trim().slice(0, 255);
       }
     }
 

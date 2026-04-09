@@ -88,20 +88,21 @@ export function useAuth() {
         .from('businesses')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        // PGRST116 = no rows returned (business not created yet by trigger)
-        if (error.code === 'PGRST116') {
-          if (attempt < 5) {
-            // Exponential backoff: 300ms, 600ms, 1200ms, 2400ms
-            await new Promise(resolve => setTimeout(resolve, 300 * attempt));
-            return fetchBusiness(userId, attempt + 1);
-          }
-          console.warn('Business record not found after retries');
-          return null;
-        }
         console.error('Error fetching business:', error);
+        return null;
+      }
+
+      // maybeSingle() returns null data if no rows found
+      if (!data) {
+        if (attempt < 5) {
+          // Exponential backoff: 300ms, 600ms, 1200ms, 2400ms
+          await new Promise(resolve => setTimeout(resolve, 300 * attempt));
+          return fetchBusiness(userId, attempt + 1);
+        }
+        console.warn('Business record not found after retries');
         return null;
       }
 
