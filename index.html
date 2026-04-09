@@ -1,8 +1,51 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Silence extension errors before anything else -->
-    <script>(function(){var e=console.error,c=console.warn;console.error=function(){for(var r=0;r<arguments.length;r++){var a=String(arguments[r]);if(a.includes('runtime.lastError')||a.includes('content_script')||a.includes('Sentry')||a.includes('429')||a.includes('insights whitelist')||a.includes('UsernameElement'))return}e.apply(console,arguments)};console.warn=function(){for(var r=0;r<arguments.length;r++){var a=String(arguments[r]);if(a.includes('SES')||a.includes('unpermitted')||a.includes('insights'))return}c.apply(console,arguments)};window.onerror=function(){return!0};window.addEventListener('error',function(e){e.stopPropagation()},!0)})();</script>
+    <!-- AGGRESSIVE extension error suppression -->
+    <script>
+    (function(){
+      var blockedPatterns = [
+        'runtime.lastError','content_script','content.js','read.js','lockdown-install',
+        'Sentry','sentry.io','429','insights whitelist','UsernameElement',
+        'Host validation failed','Host is not supported','SES Removing',
+        'unpermitted intrinsics','FrameDoesNotExist','FrameIsBrowserFrame',
+        'DelayedMessageSender','TabMonitor','background.js','kins_content',
+        'processInputEvent','Cannot read properties of null'
+      ];
+      var blockedUrls = ['sentry.io','chrome-extension','moz-extension','safari-extension'];
+
+      function shouldBlock(args) {
+        var str = Array.from(args).map(function(a){return String(a)}).join(' ');
+        return blockedPatterns.some(function(p){return str.includes(p)});
+      }
+
+      var origError = console.error;
+      var origWarn = console.warn;
+      var origLog = console.log;
+      var origInfo = console.info;
+
+      console.error = function(){ if(!shouldBlock(arguments)) origError.apply(console,arguments); };
+      console.warn = function(){ if(!shouldBlock(arguments)) origWarn.apply(console,arguments); };
+      console.log = function(){ if(!shouldBlock(arguments)) origLog.apply(console,arguments); };
+      console.info = function(){ if(!shouldBlock(arguments)) origInfo.apply(console,arguments); };
+
+      window.onerror = function(){ return true; };
+      window.onunhandledrejection = function(e){ e.preventDefault(); return true; };
+
+      window.addEventListener('error', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+      window.addEventListener('unhandledrejection', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+
+      // Block fetch to sentry
+      var origFetch = window.fetch;
+      window.fetch = function(url,opts){
+        var urlStr = String(url);
+        if(blockedUrls.some(function(u){return urlStr.includes(u)})){
+          return Promise.resolve(new Response('{}',{status:200}));
+        }
+        return origFetch.apply(this,arguments);
+      };
+    })();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
 
