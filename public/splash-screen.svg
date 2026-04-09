@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1170" height="2532" viewBox="0 0 1170 2532">
+  <rect width="1170" height="2532" fill="#F7F3EE"/>
+  <g transform="translate(585, 1100)">
+    <rect x="-96" y="-96" width="192" height="192" fill="#E8783A" rx="24"/>
+    <path d="M-48 -40v80M48 -40v80M-48 0h96" stroke="white" stroke-width="16" stroke-linecap="round"/>
+    <text y="69" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="white" text-anchor="middle">FOMO</text>
+  </g>
+  <text x="585" y="1280" font-family="system-ui, sans-serif" font-size="48" font-weight="600" fill="#1A1A1A" text-anchor="middle">Fomo</text>
+  <text x="585" y="1340" font-family="system-ui, sans-serif" font-size="28" fill="#666666" text-anchor="middle">Discover local events</text>
+</svg>

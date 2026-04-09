@@ -170,6 +170,32 @@ export const validateEventData = (data) => {
     }
   }
 
+  // Images array validation
+  if (data.images) {
+    if (!Array.isArray(data.images)) {
+      errors.push('Images must be an array');
+    } else if (data.images.length > 10) {
+      errors.push('Maximum 10 images allowed');
+    } else {
+      // Validate each image object
+      const sanitizedImages = data.images.map(img => {
+        if (typeof img === 'string') {
+          // Legacy string URL support
+          return { url: img };
+        }
+        if (typeof img === 'object' && img !== null) {
+          return {
+            url: String(img.url || '').slice(0, 500),
+            thumbnailUrl: img.thumbnailUrl ? String(img.thumbnailUrl).slice(0, 500) : null,
+            originalName: img.originalName ? String(img.originalName).slice(0, 255) : null,
+          };
+        }
+        return null;
+      }).filter(Boolean);
+      sanitized.images = sanitizedImages;
+    }
+  }
+
   // Business ID validation (required)
   if (!data.business_id) {
     errors.push('Business ID is required');

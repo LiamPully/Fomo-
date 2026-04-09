@@ -31,7 +31,8 @@
       "Skill(update-config)",
       "Bash(claude skill:*)",
       "Bash(claude plugin:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(npm i:*)"
     ]
   }
 }

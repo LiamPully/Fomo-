@@ -13,6 +13,29 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
 
   const categoryColor = getCategoryColor(event.category);
 
+  // Get image URL - support both single image and multiple images
+  const getImageUrl = () => {
+    // If event has images array, use the first one
+    if (event.images && Array.isArray(event.images) && event.images.length > 0) {
+      return event.images[0].url || event.images[0];
+    }
+    // Legacy support for single image
+    if (event.img) return event.img;
+    // Fallback
+    return null;
+  };
+
+  // Get thumbnail URL
+  const getThumbnailUrl = () => {
+    if (event.images && Array.isArray(event.images) && event.images.length > 0) {
+      return event.images[0].thumbnailUrl || event.images[0].url || event.images[0];
+    }
+    return getImageUrl();
+  };
+
+  const imageCount = event.images?.length || (event.img ? 1 : 0);
+  const mainImage = getImageUrl();
+
   // Format date nicely
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -67,26 +90,46 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
             width: 80,
             height: 80,
             borderRadius: 12,
-            background: imageError ? 'var(--bg-tertiary)' : 'transparent',
+            background: imageError || !mainImage ? 'var(--bg-tertiary)' : 'transparent',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
             flexShrink: 0,
+            position: 'relative',
           }}
         >
-          {!imageError ? (
-            <img
-              src={event.img}
-              alt=""
-              loading="lazy"
-              onError={() => setImageError(true)}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-              }}
-            />
+          {mainImage && !imageError ? (
+            <>
+              <img
+                src={getThumbnailUrl()}
+                alt=""
+                loading="lazy"
+                onError={() => setImageError(true)}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+              {imageCount > 1 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 4,
+                    right: 4,
+                    background: 'rgba(0,0,0,0.7)',
+                    color: 'white',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                  }}
+                >
+                  +{imageCount - 1}
+                </div>
+              )}
+            </>
           ) : (
             <span style={{ fontSize: 32 }}>{emoji}</span>
           )}
@@ -176,15 +219,42 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
         transform: isPressed ? 'scale(0.98)' : 'scale(1)',
       }}
     >
-      <div className="hero-card__image-wrapper">
-        {!imageError ? (
-          <img
-            src={event.img}
-            alt={event.title}
-            loading="lazy"
-            onError={() => setImageError(true)}
-            className="hero-card__image"
-          />
+      <div className="hero-card__image-wrapper" style={{ position: 'relative' }}>
+        {mainImage && !imageError ? (
+          <>
+            <img
+              src={mainImage}
+              alt={event.title}
+              loading="lazy"
+              onError={() => setImageError(true)}
+              className="hero-card__image"
+            />
+            {imageCount > 1 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 12,
+                  left: 12,
+                  background: 'rgba(0,0,0,0.7)',
+                  color: 'white',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: '4px 10px',
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                {imageCount}
+              </div>
+            )}
+          </>
         ) : (
           <div
             style={{

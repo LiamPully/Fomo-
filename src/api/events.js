@@ -127,9 +127,15 @@ export const createEvent = async (eventData) => {
       };
     }
 
+    // Prepare data for insert, including images
+    const insertData = {
+      ...validation.data,
+      images: eventData.images || [],
+    };
+
     const { data, error } = await supabase
       .from('events')
-      .insert([validation.data])
+      .insert([insertData])
       .select()
       .single()
 
