@@ -86,7 +86,7 @@ export function useAuth() {
     try {
       const { data, error } = await supabase
         .from('businesses')
-        .select('*')
+        .select('id, business_name, email, phone, website, instagram, subscription_status, event_count, created_at, updated_at')
         .eq('user_id', userId)
         .maybeSingle();
 

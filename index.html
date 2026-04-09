@@ -17,6 +17,11 @@
 
     <title>Fomo</title>
 
+    <!-- Force cache refresh -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
 
@@ -101,5 +106,18 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Force service worker update -->
+    <script>
+      (function() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (let registration of registrations) {
+              registration.update();
+            }
+          });
+        }
+      })();
+    </script>
   </body>
 </html>
