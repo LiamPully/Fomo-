@@ -973,13 +973,35 @@ const AboutScreen = ({onSignUp}) => (
 ───────────────────────────────────────────────────────────── */
 const MyEvents = ({events,userId,onBack}) => {
   const [tab,setTab]=useState("Published");
+  const [backPressed,setBackPressed]=useState(false);
   const mine=events.filter(e=>e.businessId===userId);
   const groups={Published:mine.filter(e=>e.status==="published"),Drafts:mine.filter(e=>e.status==="draft"),Past:mine.filter(e=>e.status==="past")};
   return (
     <div style={{background:BG,height:"100%",overflowY:"auto"}}>
       <div style={{padding:"16px 16px 80px"}}>
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
-          <button onClick={onBack} style={{background:WHITE,border:"none",borderRadius:"50%",width:38,height:38,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.08)"}}>
+          <button
+            onClick={onBack}
+            onMouseDown={()=>setBackPressed(true)}
+            onMouseUp={()=>setBackPressed(false)}
+            onMouseLeave={()=>setBackPressed(false)}
+            onTouchStart={()=>setBackPressed(true)}
+            onTouchEnd={()=>setBackPressed(false)}
+            style={{
+              background:WHITE,
+              border:"none",
+              borderRadius:"50%",
+              width:40,
+              height:40,
+              cursor:"pointer",
+              display:"flex",
+              alignItems:"center",
+              justifyContent:"center",
+              boxShadow:backPressed?"0 1px 2px rgba(0,0,0,0.06)":"0 1px 4px rgba(0,0,0,0.08)",
+              transform:backPressed?"scale(0.95)":"scale(1)",
+              transition:"transform 0.1s ease, box-shadow 0.1s ease",
+            }}
+          >
             <Ico n="back" s={18} c={BLACK}/>
           </button>
           <h1 style={{fontFamily:FONT,fontSize:24,fontWeight:800,color:BLACK}}>My Events</h1>
