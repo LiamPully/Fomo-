@@ -10,17 +10,20 @@ const validateEmail = (email) => {
 
 const validatePassword = (password) => {
   const errors = [];
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters');
+  if (password.length < 6) {
+    errors.push('Password must be at least 6 characters');
   }
-  if (!/[A-Z]/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
-  }
-  if (!/[a-z]/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
-  }
-  if (!/[0-9]/.test(password)) {
-    errors.push('Password must contain at least one number');
+  if (password.length >= 8) {
+    // Only enforce additional rules for 8+ char passwords
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    if (!/[0-9]/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
   }
   return errors;
 };
@@ -79,36 +82,64 @@ export function useAuth() {
     recordAttempt: recordSignInAttempt
   } = useRateLimit(5, 60000);
 
-  // Fetch business profile for current user with retry logic
-  const fetchBusiness = useCallback(async (userId, attempt = 1) => {
+  // Fetch business profile for current user with improved retry logic
+  const fetchBusiness = useCallback(async (userId, maxRetries = 5) => {
     if (!userId) return null;
 
-    try {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('id, business_name, email, phone, website, instagram, subscription_status, event_count, created_at, updated_at')
-        .eq('user_id', userId)
-        .maybeSingle();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const { data, error } = await supabase
+          .from('businesses')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching business:', error);
-        return null;
-      }
-
-      // maybeSingle() returns null data if no rows found
-      if (!data) {
-        if (attempt < 5) {
-          // Exponential backoff: 300ms, 600ms, 1200ms, 2400ms
-          await new Promise(resolve => setTimeout(resolve, 300 * attempt));
-          return fetchBusiness(userId, attempt + 1);
+        if (error) {
+          // PGRST116 = no rows returned, which is OK for new users
+          if (error.code === 'PGRST116') {
+            return null;
+          }
+          console.error('Error fetching business:', error);
+          return null;
         }
-        console.warn('Business record not found after retries');
+
+        if (data) {
+          return data;
+        }
+
+        // No data yet, wait and retry with exponential backoff
+        if (attempt < maxRetries) {
+          const delay = 300 * Math.pow(2, attempt - 1);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      } catch (err) {
+        console.error('Error fetching business:', err);
         return null;
       }
+    }
 
-      return data;
+    console.warn('Business record not found after retries');
+    return null;
+  }, []);
+
+  // Refresh session on expiry
+  const refreshSession = useCallback(async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+
+      if (!session) {
+        // Try to refresh
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) throw refreshError;
+        return refreshData.session;
+      }
+
+      return session;
     } catch (err) {
-      console.error('Error fetching business:', err);
+      console.error('Session refresh error:', err);
+      setUser(null);
+      setBusiness(null);
       return null;
     }
   }, []);
@@ -203,6 +234,9 @@ export function useAuth() {
       if (authError) throw authError;
 
       if (authData.user) {
+        // Wait for session to propagate before fetching business
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         const businessData = await fetchBusiness(authData.user.id);
         setUser(authData.user);
         setBusiness(businessData);
@@ -236,8 +270,7 @@ export function useAuth() {
     // Check for existing session
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+        const session = await refreshSession();
 
         if (session?.user) {
           setUser(session.user);
@@ -258,11 +291,15 @@ export function useAuth() {
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
+          // Small delay for trigger to complete
+          await new Promise(resolve => setTimeout(resolve, 100));
           const businessData = await fetchBusiness(session.user.id);
           setBusiness(businessData);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setBusiness(null);
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          setUser(session.user);
         }
         setLoading(false);
       }
@@ -271,7 +308,7 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchBusiness]);
+  }, [fetchBusiness, refreshSession]);
 
   // Update business data (e.g., after creating an event)
   const refreshBusiness = useCallback(async () => {
@@ -290,6 +327,7 @@ export function useAuth() {
     signIn,
     signOut,
     refreshBusiness,
+    refreshSession,
     clearError: () => setError(null),
     isAuthenticated: !!user,
   };

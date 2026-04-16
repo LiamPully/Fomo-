@@ -12,6 +12,7 @@ import { SkeletonList } from "./components/SkeletonCard";
 import LocationSearch from "./components/LocationSearch";
 import AuthModal from "./components/AuthModal";
 import CreateEvent from "./components/CreateEvent";
+import AccountScreen from "./components/AccountScreen";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./styles/design-system.css";
 
@@ -863,58 +864,19 @@ const EventsScreen = ({events,user,locLabel,radiusKm,onRadiusChange,onEventClick
 /* ─────────────────────────────────────────────────────────────
    HUB SCREEN
 ───────────────────────────────────────────────────────────── */
-const HubScreen = ({user,events,onCreateEvent,onMyEvents,onSignIn,onRefreshProfile}) => {
-  if (!user) return (
-    <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:BG}}>
-      <div style={{fontSize:52,marginBottom:20}}>🏪</div>
-      <h2 style={{fontFamily:FONT,fontSize:22,fontWeight:800,color:BLACK,marginBottom:8,textAlign:"center"}}>Your business account</h2>
-      <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,textAlign:"center",lineHeight:1.65,marginBottom:32,maxWidth:260}}>Sign in to create events and reach local audiences.</p>
-      <button onClick={onSignIn} style={{background:BLACK,color:WHITE,border:"none",borderRadius:999,padding:"14px 36px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>Sign in</button>
-    </div>
-  );
-
-  // Show recovery UI if user exists but business profile is missing
-  if (user && !user.businessLoaded) {
-    return (
-      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,background:BG}}>
-        <div style={{fontSize:48,marginBottom:16}}>⏳</div>
-        <h2 style={{fontFamily:FONT,fontSize:20,fontWeight:800,color:BLACK,marginBottom:8,textAlign:"center"}}>Setting up your profile</h2>
-        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1,textAlign:"center",lineHeight:1.65,marginBottom:24,maxWidth:280}}>Your account was created but we're still setting up your business profile. This should only take a moment.</p>
-        <button onClick={onRefreshProfile} style={{background:ORANGE,color:WHITE,border:"none",borderRadius:999,padding:"14px 36px",fontSize:15,fontWeight:700,cursor:"pointer",fontFamily:FONT}}>Try Again</button>
-      </div>
-    );
-  }
-
-  const myPub=events.filter(e=>e.businessId===user.id&&e.status==="published");
-
-  const MenuItem=({icon,label,sub,badge,onClick})=>{
-    const [hov,setHov]=useState(false);
-    return (
-      <div onClick={onClick} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-        style={{display:"flex",alignItems:"center",gap:14,padding:"15px 16px",background:hov?GRAY3:WHITE,borderRadius:16,marginBottom:10,cursor:"pointer",transition:"background .15s"}}>
-        <div style={{width:42,height:42,background:GRAY3,borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-          <Ico n={icon} s={19} c={BLACK}/>
-        </div>
-        <div style={{flex:1}}>
-          <p style={{fontFamily:FONT,fontSize:15,fontWeight:700,color:BLACK,marginBottom:2}}>{label}</p>
-          {sub&&<p style={{fontFamily:FONT,fontSize:12,color:GRAY1}}>{sub}</p>}
-        </div>
-        {badge&&<span style={{background:ORANGE+"22",color:ORANGE,borderRadius:999,fontSize:11,fontWeight:700,padding:"3px 10px",fontFamily:FONT}}>{badge}</span>}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GRAY1} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </div>
-    );
-  };
-
+const HubScreen = ({user,events,onCreateEvent,onMyEvents,onSignIn,onSignOut,onRefreshProfile,loading}) => {
   return (
-    <div style={{flex:1,overflowY:"auto",background:BG,padding:"16px 16px 80px"}}>
-      <div style={{marginBottom:24}}>
-        <h1 style={{fontFamily:FONT,fontSize:30,fontWeight:900,color:BLACK,marginBottom:4}}>Account</h1>
-        <p style={{fontFamily:FONT,fontSize:14,color:GRAY1}}>{user.name}</p>
-      </div>
-
-      <MenuItem icon="plus"  label="Create event"  sub="Publish your event for free" onClick={onCreateEvent}/>
-      <MenuItem icon="evtab" label="My Events"      sub="Drafts, published and past" badge={myPub.length>0?`${myPub.length} live`:null} onClick={onMyEvents}/>
-    </div>
+    <AccountScreen
+      user={user}
+      events={events}
+      onCreateEvent={onCreateEvent}
+      onManageEvents={onMyEvents}
+      onEditProfile={() => {}}
+      onSignIn={onSignIn}
+      onSignOut={onSignOut}
+      onRefreshProfile={onRefreshProfile}
+      loading={loading}
+    />
   );
 };
 
@@ -1296,7 +1258,7 @@ export default function App() {
         {/* Tab screens */}
         <div style={{display:"flex",flexDirection:"column",height:"100%",paddingBottom:60}}>
           {tab==="events"&&<EventsScreen events={location?filterByRadius(sortByDistance(events),radiusKm):events} user={appUser} locLabel={locLabel||"All locations"} radiusKm={radiusKm} onRadiusChange={setRadiusKm} onEventClick={setSelected} onSignIn={()=>setShowAuth(true)} showAds={showAds} userLocation={location} eventsLoading={eventsLoading}/>}
-          {tab==="hub"   &&<HubScreen user={appUser} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)} onRefreshProfile={refreshBusiness}/>}
+          {tab==="hub"   &&<HubScreen user={appUser} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)} onSignOut={handleSignOut} onRefreshProfile={refreshBusiness} loading={loading}/>}
           {tab==="about" &&<AboutScreen onSignUp={()=>setShowAuth(true)}/>}
         </div>
 
