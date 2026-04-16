@@ -144,6 +144,32 @@ export function useAuth() {
     }
   }, []);
 
+  // Create business profile manually (fallback if trigger fails)
+  const createBusinessProfile = useCallback(async (userId, businessName) => {
+    try {
+      const { data, error } = await supabase
+        .from('businesses')
+        .insert([
+          {
+            user_id: userId,
+            business_name: businessName.trim(),
+            created_at: new Date().toISOString(),
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to create business profile:', error);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.error('Exception creating business profile:', err);
+      return null;
+    }
+  }, []);
+
   // Sign up with email/password
   const signUp = useCallback(async (email, password, businessName) => {
     setError(null);
@@ -183,9 +209,13 @@ export function useAuth() {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Note: Business record is now auto-created by database trigger
-        // But we still fetch it to update local state
-        const businessData = await fetchBusiness(authData.user.id);
+        // Try to fetch business record (may be created by trigger)
+        let businessData = await fetchBusiness(authData.user.id);
+
+        // If trigger failed or is slow, create manually
+        if (!businessData) {
+          businessData = await createBusinessProfile(authData.user.id, businessName);
+        }
 
         setUser(authData.user);
         setBusiness(businessData);
@@ -196,7 +226,7 @@ export function useAuth() {
       setError(sanitized);
       return { success: false, error: sanitized };
     }
-  }, [fetchBusiness]);
+  }, [fetchBusiness, createBusinessProfile]);
 
   // Sign in with email/password
   const signIn = useCallback(async (email, password) => {
@@ -237,7 +267,16 @@ export function useAuth() {
         // Wait for session to propagate before fetching business
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        const businessData = await fetchBusiness(authData.user.id);
+        let businessData = await fetchBusiness(authData.user.id);
+
+        // If no business record exists, try to create one from user metadata
+        if (!businessData && authData.user.user_metadata?.business_name) {
+          businessData = await createBusinessProfile(
+            authData.user.id,
+            authData.user.user_metadata.business_name
+          );
+        }
+
         setUser(authData.user);
         setBusiness(businessData);
         return { success: true, error: null };
@@ -247,7 +286,7 @@ export function useAuth() {
       setError(sanitized);
       return { success: false, error: sanitized };
     }
-  }, [fetchBusiness, isSignInRateLimited, signInRemainingTime, recordSignInAttempt]);
+  }, [fetchBusiness, isSignInRateLimited, signInRemainingTime, recordSignInAttempt, createBusinessProfile]);
 
   // Sign out
   const signOut = useCallback(async () => {
@@ -293,7 +332,16 @@ export function useAuth() {
           setUser(session.user);
           // Small delay for trigger to complete
           await new Promise(resolve => setTimeout(resolve, 100));
-          const businessData = await fetchBusiness(session.user.id);
+          let businessData = await fetchBusiness(session.user.id);
+
+          // Fallback: create business if missing and we have metadata
+          if (!businessData && session.user.user_metadata?.business_name) {
+            businessData = await createBusinessProfile(
+              session.user.id,
+              session.user.user_metadata.business_name
+            );
+          }
+
           setBusiness(businessData);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
@@ -308,15 +356,24 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchBusiness, refreshSession]);
+  }, [fetchBusiness, refreshSession, createBusinessProfile]);
 
   // Update business data (e.g., after creating an event)
   const refreshBusiness = useCallback(async () => {
     if (user?.id) {
-      const businessData = await fetchBusiness(user.id);
+      let businessData = await fetchBusiness(user.id);
+
+      // Fallback: create business if missing
+      if (!businessData && user.user_metadata?.business_name) {
+        businessData = await createBusinessProfile(
+          user.id,
+          user.user_metadata.business_name
+        );
+      }
+
       setBusiness(businessData);
     }
-  }, [user, fetchBusiness]);
+  }, [user, fetchBusiness, createBusinessProfile]);
 
   return {
     user,
@@ -328,6 +385,7 @@ export function useAuth() {
     signOut,
     refreshBusiness,
     refreshSession,
+    createBusinessProfile,
     clearError: () => setError(null),
     isAuthenticated: !!user,
   };

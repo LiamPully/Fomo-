@@ -477,10 +477,27 @@ const AdBanner = () => {
 ───────────────────────────────────────────────────────────── */
 const EventCard = ({event,onClick}) => {
   const [err,setErr]=useState(false);
+  const [isPressed,setIsPressed]=useState(false);
+
   return (
     <div
       onClick={()=>onClick(event)}
-      style={{background:WHITE,borderRadius:16,overflow:"hidden",cursor:"pointer",marginBottom:10,flexShrink:0}}
+      onMouseDown={()=>setIsPressed(true)}
+      onMouseUp={()=>setIsPressed(false)}
+      onMouseLeave={()=>setIsPressed(false)}
+      onTouchStart={()=>setIsPressed(true)}
+      onTouchEnd={()=>setIsPressed(false)}
+      style={{
+        background:WHITE,
+        borderRadius:16,
+        overflow:"hidden",
+        cursor:"pointer",
+        marginBottom:10,
+        flexShrink:0,
+        transform:isPressed?'scale(0.98)':'scale(1)',
+        transition:'transform 0.15s ease',
+        boxShadow:isPressed?'0 1px 4px rgba(0,0,0,0.1)':'0 2px 8px rgba(0,0,0,0.08)',
+      }}
     >
       {/* Full-bleed hero photo */}
       <div style={{width:"100%",height:200,overflow:"hidden",borderRadius:"16px 16px 0 0"}}>
@@ -534,6 +551,7 @@ const EventCard = ({event,onClick}) => {
 ───────────────────────────────────────────────────────────── */
 const EventDetail = ({event,onBack}) => {
   const [err,setErr]=useState(false);
+  const [backPressed,setBackPressed]=useState(false);
   const catC = getCategoryColor(event.category);
 
   const ContactBtn = ({icon,label,href,bg,textColor}) => (
@@ -551,7 +569,7 @@ const EventDetail = ({event,onBack}) => {
   return (
     <div style={{background:WHITE,height:"100%",overflowY:"auto"}}>
       {/* Full-bleed hero */}
-      <div style={{position:"relative",height:280,flexShrink:0}}>
+      <div style={{position:"relative",height:260,flexShrink:0}}>
         {!err
           ? <img src={event.img} alt={event.title} onError={()=>setErr(true)}
               style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
@@ -559,8 +577,32 @@ const EventDetail = ({event,onBack}) => {
               {event.category==="markets"?"🛍️":event.category==="food-drink"?"🍽️":event.category==="music"?"🎵":event.category==="sport-fitness"?"⚽":event.category==="faith-christian"?"✝️":event.category==="kids"?"🧸":event.category==="nightlife"?"🌙":"🎭"}
             </div>
         }
-        {/* Back button */}
-        <button onClick={onBack} style={{position:"absolute",top:54,left:16,background:"rgba(255,255,255,0.92)",border:"none",borderRadius:"50%",width:38,height:38,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,0.18)"}}>
+        {/* Back button with touch feedback */}
+        <button
+          onClick={onBack}
+          onMouseDown={()=>setBackPressed(true)}
+          onMouseUp={()=>setBackPressed(false)}
+          onMouseLeave={()=>setBackPressed(false)}
+          onTouchStart={()=>setBackPressed(true)}
+          onTouchEnd={()=>setBackPressed(false)}
+          style={{
+            position:"absolute",
+            top:16,
+            left:16,
+            background:"rgba(255,255,255,0.95)",
+            border:"none",
+            borderRadius:"50%",
+            width:40,
+            height:40,
+            display:"flex",
+            alignItems:"center",
+            justifyContent:"center",
+            cursor:"pointer",
+            boxShadow:backPressed?"0 1px 4px rgba(0,0,0,0.15)":"0 2px 8px rgba(0,0,0,0.18)",
+            transform:backPressed?"scale(0.95)":"scale(1)",
+            transition:"transform 0.1s ease, box-shadow 0.1s ease",
+          }}
+        >
           <Ico n="back" s={18} c={BLACK}/>
         </button>
       </div>
@@ -577,16 +619,16 @@ const EventDetail = ({event,onBack}) => {
 
         {/* Info rows — colored icon chip, label, value */}
         {[
-          {icon:"cal", chipC:"#4A82C4", label:"DATE",     val:fmtLong(event.start)},
-          {icon:"clk", chipC:ORANGE,    label:"TIME",     val:`${fmtHHMM(event.start)} – ${fmtHHMM(event.end)}`},
-          {icon:"pin", chipC:"#E05C5C", label:"LOCATION", val:(event.location||"")+(event.address?"\n"+event.address:"")},
+          {icon:"cal", chipC:"#4A82C4", label:"When",     val:fmtLong(event.start)},
+          {icon:"clk", chipC:ORANGE,    label:"Time",     val:`${fmtHHMM(event.start)} – ${fmtHHMM(event.end)}`},
+          {icon:"pin", chipC:"#E05C5C", label:"Where", val:(event.location||"")+(event.address?"\n"+event.address:"")},
         ].map(({icon,chipC,label,val})=>(
           <div key={label} style={{display:"flex",gap:14,marginBottom:18,alignItems:"flex-start"}}>
             <div style={{width:38,height:38,background:chipC+"1A",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
               <span style={{color:chipC}}><Ico n={icon} s={16} c={chipC}/></span>
             </div>
             <div>
-              <p style={{fontFamily:FONT,fontSize:10,fontWeight:700,color:GRAY1,letterSpacing:"0.9px",textTransform:"uppercase",marginBottom:3}}>{label}</p>
+              <p style={{fontFamily:FONT,fontSize:12,fontWeight:600,color:GRAY1,marginBottom:2}}>{label}</p>
               {val.split("\n").map((line,i)=>(
                 <p key={i} style={{fontFamily:FONT,fontSize:15,fontWeight:i===0?700:400,color:BLACK,lineHeight:1.5}}>{line}</p>
               ))}
@@ -688,12 +730,9 @@ const EventsScreen = ({events,user,locLabel,radiusKm,onRadiusChange,onEventClick
       <div style={{background:BG,padding:"16px 16px 0",position:"sticky",top:0,zIndex:10}}>
         {/* Title */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
-          <h1 style={{fontFamily:FONT,fontSize:36,fontWeight:900,color:BLACK,lineHeight:1.05,letterSpacing:"-0.5px"}}>
-            What's<br/>happening?
+          <h1 style={{fontFamily:FONT,fontSize:28,fontWeight:900,color:BLACK,lineHeight:1.1,letterSpacing:"-0.5px"}}>
+            What's happening?
           </h1>
-          <button style={{background:"none",border:"none",cursor:"pointer",padding:4,marginTop:6}}>
-            <Ico n="search" s={22} c={BLACK}/>
-          </button>
         </div>
         {/* Location pill with radius selector */}
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
@@ -739,8 +778,19 @@ const EventsScreen = ({events,user,locLabel,radiusKm,onRadiusChange,onEventClick
           </div>
         )}
 
-        {/* Category pills — selected = solid with category color */}
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingBottom:8}}>
+        {/* Category pills — horizontal scroll on mobile */}
+        <div style={{
+          display:"flex",
+          gap:8,
+          paddingBottom:8,
+          overflowX:"auto",
+          scrollbarWidth:"none",
+          msOverflowStyle:"none",
+          WebkitOverflowScrolling:"touch",
+          paddingLeft:2,
+          paddingRight:16,
+          marginRight:-16,
+        }}>
           {MAIN_CATEGORIES.map(c=>(
             <button
               key={c.id}
@@ -1224,6 +1274,8 @@ export default function App() {
         *{margin:0;padding:0;box-sizing:border-box;}
         ::-webkit-scrollbar{display:none;}
         @keyframes slideUp{from{transform:translateY(60px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+        @keyframes slideInRight{from{transform:translateX(100%);}to{transform:translateX(0);}}
+        @keyframes slideInUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
         button{-webkit-tap-highlight-color:transparent;outline:none;}
         a{-webkit-tap-highlight-color:transparent;}
         input,textarea{font-family:'Sora',system-ui,sans-serif;}
@@ -1240,17 +1292,23 @@ export default function App() {
 
         {/* Stack screen overlays (slide in over tabs) */}
         {selectedEvent&&(
-          <div style={{position:"absolute",inset:0,zIndex:30,background:WHITE}}>
+          <div style={{
+            position:"absolute",
+            inset:0,
+            zIndex:30,
+            background:WHITE,
+            animation:'slideInRight 0.3s ease',
+          }}>
             <EventDetail event={selectedEvent} onBack={()=>setSelected(null)}/>
           </div>
         )}
         {showCreate&&appUser&&(
-          <div style={{position:"absolute",inset:0,zIndex:30}}>
+          <div style={{position:"absolute",inset:0,zIndex:30,animation:'slideInRight 0.3s ease'}}>
             <CreateEvent user={appUser} onSave={handleSave} onBack={()=>setShowCreate(false)}/>
           </div>
         )}
         {showMyEv&&appUser&&(
-          <div style={{position:"absolute",inset:0,zIndex:30}}>
+          <div style={{position:"absolute",inset:0,zIndex:30,animation:'slideInRight 0.3s ease'}}>
             <MyEvents events={events} userId={appUser.id} onBack={()=>setShowMyEv(false)}/>
           </div>
         )}
