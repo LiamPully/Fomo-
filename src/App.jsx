@@ -13,6 +13,7 @@ import LocationSearch from "./components/LocationSearch";
 import AuthModal from "./components/AuthModal";
 import CreateEvent from "./components/CreateEvent";
 import AccountScreen from "./components/AccountScreen";
+import EditProfileModal from "./components/EditProfileModal";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./styles/design-system.css";
 
@@ -914,14 +915,14 @@ const EventsScreen = ({events,user,locLabel,radiusKm,onRadiusChange,onEventClick
 /* ─────────────────────────────────────────────────────────────
    HUB SCREEN
 ───────────────────────────────────────────────────────────── */
-const HubScreen = ({user,events,onCreateEvent,onMyEvents,onSignIn,onSignOut,onRefreshProfile,loading}) => {
+const HubScreen = ({user,events,onCreateEvent,onMyEvents,onSignIn,onSignOut,onEditProfile,onRefreshProfile,loading}) => {
   return (
     <AccountScreen
       user={user}
       events={events}
       onCreateEvent={onCreateEvent}
       onManageEvents={onMyEvents}
-      onEditProfile={() => {}}
+      onEditProfile={onEditProfile}
       onSignIn={onSignIn}
       onSignOut={onSignOut}
       onRefreshProfile={onRefreshProfile}
@@ -1067,6 +1068,7 @@ export default function App() {
   const [showAuth,setShowAuth]        = useState(false);
   const [showCreate,setShowCreate]    = useState(false);
   const [showMyEv,setShowMyEv]        = useState(false);
+  const [showEditProfile,setShowEditProfile] = useState(false);
   // Supabase Auth hook
   const { user, business, loading: authLoading, error: authError, signUp, signIn, signOut, refreshBusiness, clearError } = useAuth();
 
@@ -1316,7 +1318,7 @@ export default function App() {
         {/* Tab screens */}
         <div style={{display:"flex",flexDirection:"column",height:"100%",paddingBottom:60}}>
           {tab==="events"&&<EventsScreen events={location?filterByRadius(sortByDistance(events),radiusKm):events} user={appUser} locLabel={locLabel||"All locations"} radiusKm={radiusKm} onRadiusChange={setRadiusKm} onEventClick={setSelected} onSignIn={()=>setShowAuth(true)} showAds={showAds} userLocation={location} eventsLoading={eventsLoading}/>}
-          {tab==="hub"   &&<HubScreen user={appUser} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)} onSignOut={handleSignOut} onRefreshProfile={refreshBusiness} loading={loading}/>}
+          {tab==="hub"   &&<HubScreen user={appUser} events={events} onCreateEvent={()=>setShowCreate(true)} onMyEvents={()=>setShowMyEv(true)} onSignIn={()=>setShowAuth(true)} onSignOut={handleSignOut} onEditProfile={()=>setShowEditProfile(true)} onRefreshProfile={refreshBusiness} loading={loading}/>}
           {tab==="about" &&<AboutScreen onSignUp={()=>setShowAuth(true)}/>}
         </div>
 
@@ -1344,6 +1346,12 @@ export default function App() {
           onRegister={handleRegister}
           error={authError}
           clearError={clearError}
+        />
+        <EditProfileModal
+          open={showEditProfile}
+          onClose={()=>setShowEditProfile(false)}
+          user={appUser}
+          onProfileUpdated={refreshBusiness}
         />
       </div>
     </div>
