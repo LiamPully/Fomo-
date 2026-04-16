@@ -35,7 +35,8 @@
       "Bash(npm i:*)",
       "Bash(git rm:*)",
       "Bash(npm test:*)",
-      "Bash(npx --yes cloudflared tunnel --url http://localhost:3000)"
+      "Bash(npx --yes cloudflared tunnel --url http://localhost:3000)",
+      "Bash(npx:*)"
     ]
   }
 }

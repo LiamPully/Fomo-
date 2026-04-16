@@ -5,6 +5,7 @@ const GRAY1 = "#888880";
 const GRAY2 = "#E4E1DA";
 const GRAY3 = "#F7F5F1";
 const BLACK = "#111111";
+const WHITE = "#FFFFFF";
 const ORANGE = "#E8783A";
 
 // Icon component
