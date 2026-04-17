@@ -1,32 +1,89 @@
-import { useState, useCallback, useRef, memo, useEffect } from 'react';
+import { useState, useCallback, useRef, memo, useEffect } from "react";
+import "../styles/modern-design.css";
 
-const FONT = "'Sora', system-ui, sans-serif";
-const GRAY1 = "#888880";
-const GRAY2 = "#E4E1DA";
-const GRAY3 = "#F7F5F1";
-const BLACK = "#111111";
+// Modern Design Tokens
+const FONT =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const GRAY = "#5F6368";
+const GRAY_LIGHT = "#F1F3F4";
+const GRAY_MEDIUM = "#80868B";
+const BLACK = "#1A1A1A";
 const WHITE = "#FFFFFF";
-const ORANGE = "#E8783A";
+const ACCENT = "#E85D3F";
+const ACCENT_LIGHT = "#FFF5F2";
 
 // Icon component
-const I = ({ s = 18, c = "currentColor", children }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none"
-    stroke={c} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-    {children}
-  </svg>
-);
+const Icon = ({ name, size = 18, color = BLACK }) => {
+  const icons = {
+    pin: (
+      <>
+        <path
+          d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+          stroke={color}
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle
+          cx="12"
+          cy="10"
+          r="3"
+          stroke={color}
+          strokeWidth="2"
+          fill="none"
+        />
+      </>
+    ),
+    search: (
+      <>
+        <circle
+          cx="11"
+          cy="11"
+          r="8"
+          stroke={color}
+          strokeWidth="2"
+          fill="none"
+        />
+        <line
+          x1="21"
+          y1="21"
+          x2="16.65"
+          y2="16.65"
+          stroke={color}
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </>
+    ),
+    x: (
+      <>
+        <line
+          x1="18"
+          y1="6"
+          x2="6"
+          y2="18"
+          stroke={color}
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <line
+          x1="6"
+          y1="6"
+          x2="18"
+          y2="18"
+          stroke={color}
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </>
+    ),
+  };
 
-const icons = {
-  pin: <I><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></I>,
-};
-
-const Ico = ({ n, s = 18, c = "currentColor" }) => {
-  const el = icons[n];
-  if (!el) return null;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: s, height: s, flexShrink: 0, color: c }}>
-      {el}
-    </span>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {icons[name] || null}
+    </svg>
   );
 };
 
@@ -35,15 +92,18 @@ const PredictionList = memo(({ predictions, onSelect, visible }) => {
   if (!visible || predictions.length === 0) return null;
 
   return (
-    <div style={{
-      background: "#fff",
-      border: `1px solid ${GRAY2}`,
-      borderRadius: 12,
-      marginBottom: 12,
-      maxHeight: 200,
-      overflowY: "auto",
-      WebkitOverflowScrolling: "touch"
-    }}>
+    <div
+      style={{
+        background: WHITE,
+        border: `1px solid ${GRAY_LIGHT}`,
+        borderRadius: 12,
+        marginBottom: 12,
+        maxHeight: 200,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+      }}
+    >
       {predictions.map((prediction, idx) => (
         <div
           key={prediction.place_id || idx}
@@ -53,18 +113,21 @@ const PredictionList = memo(({ predictions, onSelect, visible }) => {
             onSelect(prediction);
           }}
           style={{
-            padding: "12px 16px",
-            borderBottom: `1px solid ${idx < predictions.length - 1 ? GRAY2 : "transparent"}`,
+            padding: "14px 16px",
+            borderBottom: `1px solid ${idx < predictions.length - 1 ? GRAY_LIGHT : "transparent"}`,
             cursor: "pointer",
             fontFamily: FONT,
             fontSize: 14,
             display: "flex",
             alignItems: "center",
-            gap: 8
+            gap: 10,
+            transition: "background 0.15s ease",
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = GRAY_LIGHT)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = WHITE)}
         >
-          <Ico n="pin" s={14} c={GRAY1}/>
-          <span>{prediction.description}</span>
+          <Icon name="pin" size={16} color={GRAY} />
+          <span style={{ color: BLACK }}>{prediction.description}</span>
         </div>
       ))}
     </div>
@@ -72,55 +135,72 @@ const PredictionList = memo(({ predictions, onSelect, visible }) => {
 });
 
 // Stable input component that never re-renders from parent
-const StableInput = memo(({ inputRef, onChange, hasError }) => {
-  // This component never re-renders after initial mount
-  // It manages its own DOM state
-  return (
-    <div style={{position: "relative", marginBottom: 12}}>
-      <input
-        ref={inputRef}
-        type="text"
-        placeholder="Search for address, street, suburb, or city..."
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck="false"
-        onChange={onChange}
-        style={{
-          width: "100%",
-          border: `1.5px solid ${hasError ? "#E8783A" : GRAY2}`,
-          borderRadius: 14,
-          padding: "13px 16px",
-          fontSize: 16,
-          outline: "none",
-          fontFamily: FONT,
-          boxSizing: "border-box",
-          background: GRAY3,
-          WebkitAppearance: "none",
-          touchAction: "manipulation"
-        }}
-      />
-    </div>
-  );
-}, () => true); // Always return true for comparison - never re-render
+const StableInput = memo(
+  ({ inputRef, onChange, hasError }) => {
+    return (
+      <div style={{ position: "relative", marginBottom: 12 }}>
+        <div
+          style={{
+            position: "absolute",
+            left: 14,
+            top: "50%",
+            transform: "translateY(-50%)",
+            pointerEvents: "none",
+          }}
+        >
+          <Icon name="search" size={18} color={GRAY} />
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="Search for address, street, suburb, or city..."
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          onChange={onChange}
+          style={{
+            width: "100%",
+            border: `1.5px solid ${hasError ? ACCENT : GRAY_LIGHT}`,
+            borderRadius: 12,
+            padding: "14px 16px 14px 44px",
+            fontSize: 15,
+            outline: "none",
+            fontFamily: FONT,
+            boxSizing: "border-box",
+            background: WHITE,
+            WebkitAppearance: "none",
+            touchAction: "manipulation",
+            transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = ACCENT;
+            e.target.style.boxShadow = `0 0 0 3px ${ACCENT_LIGHT}`;
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = hasError ? ACCENT : GRAY_LIGHT;
+            e.target.style.boxShadow = "none";
+          }}
+        />
+      </div>
+    );
+  },
+  () => true,
+);
 
 const LocationSearch = memo(({ onSelect }) => {
-  // Use ref for input to prevent re-render focus loss
   const inputRef = useRef(null);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [predictions, setPredictions] = useState([]);
 
-  // Store display value in ref to avoid re-renders during typing
   const displayValueRef = useRef("");
   const isTypingRef = useRef(false);
   const searchTimeoutRef = useRef(null);
 
-  // Force update only when we need to show/hide predictions
   const [, forceUpdate] = useState({});
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -129,30 +209,33 @@ const LocationSearch = memo(({ onSelect }) => {
     };
   }, []);
 
-  const handlePredictionSelect = useCallback(async (prediction) => {
-    try {
-      const { geocodeAddress } = await import('../lib/location.js');
-      const result = await geocodeAddress(prediction.description);
-      if (result.location) {
-        const loc = {
-          name: prediction.description,
-          lat: result.location.lat,
-          lng: result.location.lng
-        };
-        setSelected(loc);
-        displayValueRef.current = prediction.description;
-        if (inputRef.current) {
-          inputRef.current.value = prediction.description;
+  const handlePredictionSelect = useCallback(
+    async (prediction) => {
+      try {
+        const { geocodeAddress } = await import("../lib/location.js");
+        const result = await geocodeAddress(prediction.description);
+        if (result.location) {
+          const loc = {
+            name: prediction.description,
+            lat: result.location.lat,
+            lng: result.location.lng,
+          };
+          setSelected(loc);
+          displayValueRef.current = prediction.description;
+          if (inputRef.current) {
+            inputRef.current.value = prediction.description;
+          }
+          setPredictions([]);
+          setError(null);
+          onSelect(loc);
         }
-        setPredictions([]);
-        setError(null);
-        onSelect(loc);
+      } catch (err) {
+        setError("Failed to get coordinates");
+        forceUpdate({});
       }
-    } catch (err) {
-      setError('Failed to get coordinates');
-      forceUpdate({});
-    }
-  }, [onSelect]);
+    },
+    [onSelect],
+  );
 
   const handleChange = useCallback((e) => {
     const val = e.target.value;
@@ -161,7 +244,6 @@ const LocationSearch = memo(({ onSelect }) => {
     setError(null);
     isTypingRef.current = true;
 
-    // Clear previous search
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
@@ -170,7 +252,7 @@ const LocationSearch = memo(({ onSelect }) => {
       setLoading(true);
       searchTimeoutRef.current = setTimeout(async () => {
         try {
-          const { searchPlaces } = await import('../lib/location.js');
+          const { searchPlaces } = await import("../lib/location.js");
           const result = await searchPlaces(val);
           if (isTypingRef.current) {
             setPredictions(result.predictions || []);
@@ -198,20 +280,20 @@ const LocationSearch = memo(({ onSelect }) => {
       onSelect(selected);
     } else if (val.trim()) {
       try {
-        const { geocodeAddress } = await import('../lib/location.js');
+        const { geocodeAddress } = await import("../lib/location.js");
         const result = await geocodeAddress(val);
         if (result.location) {
           onSelect({
             name: val,
             lat: result.location.lat,
-            lng: result.location.lng
+            lng: result.location.lng,
           });
         } else {
-          setError('Please select a valid location');
+          setError("Please select a valid location");
           forceUpdate({});
         }
       } catch (err) {
-        setError('Failed to validate location');
+        setError("Failed to validate location");
         forceUpdate({});
       }
     }
@@ -237,14 +319,24 @@ const LocationSearch = memo(({ onSelect }) => {
       />
 
       {loading && (
-        <div style={{
-          position: "absolute",
-          right: 12,
-          top: "50%",
-          transform: "translateY(-50%)",
-          pointerEvents: "none"
-        }}>
-          <span style={{fontSize: 12, color: GRAY1}}>...</span>
+        <div
+          style={{
+            position: "absolute",
+            right: 14,
+            top: 14,
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              width: 18,
+              height: 18,
+              border: `2px solid ${GRAY_LIGHT}`,
+              borderTopColor: ACCENT,
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+            }}
+          />
         </div>
       )}
 
@@ -255,27 +347,41 @@ const LocationSearch = memo(({ onSelect }) => {
       />
 
       {selected && (
-        <div style={{
-          background: "#E8783A15",
-          border: `1px solid ${ORANGE}`,
-          borderRadius: 12,
-          padding: "10px 14px",
-          marginBottom: 12,
-          display: "flex",
-          alignItems: "center",
-          gap: 8
-        }}>
-          <Ico n="pin" s={14} c={ORANGE}/>
-          <span style={{fontFamily: FONT, fontSize: 13, color: BLACK, flex: 1}}>{selected.name}</span>
+        <div
+          style={{
+            background: ACCENT_LIGHT,
+            border: `1.5px solid ${ACCENT}`,
+            borderRadius: 12,
+            padding: "12px 14px",
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <Icon name="pin" size={16} color={ACCENT} />
+          <span
+            style={{
+              fontFamily: FONT,
+              fontSize: 14,
+              color: BLACK,
+              flex: 1,
+              fontWeight: 500,
+            }}
+          >
+            {selected.name}
+          </span>
           <button
             onClick={handleClear}
             style={{
               background: "none",
               border: "none",
-              color: GRAY1,
+              color: GRAY,
               cursor: "pointer",
               fontSize: 12,
-              padding: "4px 8px"
+              padding: "4px 8px",
+              fontFamily: FONT,
+              fontWeight: 500,
             }}
           >
             Change
@@ -284,7 +390,18 @@ const LocationSearch = memo(({ onSelect }) => {
       )}
 
       {error && (
-        <div style={{color: "#E8783A", fontSize: 13, marginBottom: 12, fontFamily: FONT, textAlign: "center"}}>
+        <div
+          style={{
+            color: ACCENT,
+            fontSize: 14,
+            marginBottom: 16,
+            fontFamily: FONT,
+            textAlign: "center",
+            background: ACCENT_LIGHT,
+            padding: "10px",
+            borderRadius: 8,
+          }}
+        >
           {error}
         </div>
       )}
@@ -294,20 +411,38 @@ const LocationSearch = memo(({ onSelect }) => {
         disabled={!displayValueRef.current?.trim() && !selected}
         style={{
           width: "100%",
-          background: (!displayValueRef.current?.trim() && !selected) ? GRAY2 : BLACK,
-          color: (!displayValueRef.current?.trim() && !selected) ? GRAY1 : WHITE,
+          background:
+            !displayValueRef.current?.trim() && !selected ? GRAY_LIGHT : BLACK,
+          color:
+            !displayValueRef.current?.trim() && !selected ? GRAY_MEDIUM : WHITE,
           border: "none",
-          borderRadius: 999,
+          borderRadius: 24,
           padding: "15px 0",
           fontSize: 15,
-          fontWeight: 700,
-          cursor: (!displayValueRef.current?.trim() && !selected) ? "not-allowed" : "pointer",
+          fontWeight: 600,
+          cursor:
+            !displayValueRef.current?.trim() && !selected
+              ? "not-allowed"
+              : "pointer",
           fontFamily: FONT,
-          marginBottom: 12
+          marginBottom: 12,
+          transition: "transform 0.15s ease",
         }}
+        onMouseDown={(e) =>
+          (displayValueRef.current?.trim() || selected) &&
+          (e.currentTarget.style.transform = "scale(0.98)")
+        }
+        onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
       >
         Continue
       </button>
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 });

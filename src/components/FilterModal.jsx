@@ -1,27 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
-import { MAIN_CATEGORIES } from '../lib/categories';
+import { useEffect, useRef, useState } from "react";
+import { MAIN_CATEGORIES } from "../lib/categories";
+import "../styles/modern-design.css";
 
-const FONT = "'Sora', system-ui, sans-serif";
-const BG = '#F0EDE6';
-const BLACK = '#111111';
-const WHITE = '#FFFFFF';
-const ORANGE = '#E8783A';
-const GRAY1 = '#888880';
-const GRAY2 = '#E4E1DA';
-const GRAY3 = '#F7F5F1';
+// Modern Design Tokens
+const FONT =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const BG = "#F8F9FA";
+const BLACK = "#1A1A1A";
+const WHITE = "#FFFFFF";
+const ACCENT = "#E85D3F";
+const GRAY = "#5F6368";
+const GRAY_LIGHT = "#F1F3F4";
+const GRAY_MEDIUM = "#80868B";
 
 const SORT_OPTIONS = [
-  { id: 'chronological', label: 'Date', desc: 'Soonest first' },
-  { id: 'alphabetical', label: 'Alphabetical', desc: 'A to Z' },
-  { id: 'distance', label: 'Distance', desc: 'Nearest first' },
-  { id: 'popularity', label: 'Popularity', desc: 'Most viewed' },
+  { id: "chronological", label: "Date", desc: "Soonest first" },
+  { id: "alphabetical", label: "Alphabetical", desc: "A to Z" },
+  { id: "distance", label: "Distance", desc: "Nearest first" },
+  { id: "popularity", label: "Popularity", desc: "Most viewed" },
 ];
 
 const DATE_OPTIONS = [
-  { id: 'all', label: 'All Time' },
-  { id: 'today', label: 'Today' },
-  { id: 'week', label: 'This Week' },
-  { id: 'month', label: 'This Month' },
+  { id: "all", label: "All Time" },
+  { id: "today", label: "Today" },
+  { id: "week", label: "This Week" },
+  { id: "month", label: "This Month" },
 ];
 
 const DISTANCE_OPTIONS = [5, 10, 25, 50, 100];
@@ -48,8 +51,9 @@ export const FilterModal = ({
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen, onClose]);
 
@@ -76,10 +80,10 @@ export const FilterModal = ({
 
   const handleReset = () => {
     setLocalFilters({
-      sortBy: 'chronological',
-      period: 'all',
+      sortBy: "chronological",
+      period: "all",
       distance: 25,
-      category: 'all',
+      category: "all",
     });
   };
 
@@ -88,39 +92,50 @@ export const FilterModal = ({
   return (
     <div
       style={{
-        position: 'fixed',
+        position: "fixed",
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
+        background: "rgba(0,0,0,0.4)",
+        zIndex: 200,
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        animation: "fadeIn 0.2s ease",
       }}
     >
       <div
         ref={modalRef}
         style={{
           background: BG,
-          borderRadius: '24px 24px 0 0',
-          width: '100%',
+          borderRadius: "20px 20px 0 0",
+          width: "100%",
           maxWidth: 430,
-          maxHeight: '85vh',
-          overflowY: 'auto',
-          animation: 'slideUp 0.3s ease-out',
+          maxHeight: "85vh",
+          overflowY: "auto",
+          animation: "slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
       >
+        {/* Handle bar */}
+        <div
+          style={{
+            width: 36,
+            height: 4,
+            borderRadius: 2,
+            background: GRAY_LIGHT,
+            margin: "12px auto 8px",
+          }}
+        />
+
         {/* Header */}
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '20px 20px 16px',
-            borderBottom: `1px solid ${GRAY2}`,
-            position: 'sticky',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "12px 20px 16px",
+            position: "sticky",
             top: 0,
             background: BG,
             zIndex: 10,
@@ -129,30 +144,33 @@ export const FilterModal = ({
           <h2
             style={{
               fontFamily: FONT,
-              fontSize: 20,
-              fontWeight: 800,
+              fontSize: 22,
+              fontWeight: 700,
               color: BLACK,
               margin: 0,
             }}
           >
-            Filter
+            Filters
           </h2>
           <button
             onClick={onClose}
             style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
+              background: "none",
+              border: "none",
+              cursor: "pointer",
               padding: 8,
-              borderRadius: 999,
+              borderRadius: 10,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <svg
-              width="24"
-              height="24"
+              width="22"
+              height="22"
               viewBox="0 0 24 24"
               fill="none"
-              stroke={GRAY1}
+              stroke={GRAY}
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -164,56 +182,59 @@ export const FilterModal = ({
         </div>
 
         {/* Content */}
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: "20px" }}>
           {/* Sort By Section */}
           <div style={{ marginBottom: 28 }}>
             <p
               style={{
                 fontFamily: FONT,
-                fontSize: 14,
-                fontWeight: 700,
-                color: BLACK,
+                fontSize: 13,
+                fontWeight: 600,
+                color: GRAY,
                 marginBottom: 12,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
               }}
             >
               Sort By
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {SORT_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
                   onClick={() => handleSortChange(opt.id)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '14px 16px',
-                    background: localFilters.sortBy === opt.id ? WHITE : 'transparent',
-                    border: `1.5px solid ${localFilters.sortBy === opt.id ? BLACK : GRAY2}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "14px 16px",
+                    background:
+                      localFilters.sortBy === opt.id ? WHITE : "transparent",
+                    border: `1.5px solid ${localFilters.sortBy === opt.id ? BLACK : GRAY_LIGHT}`,
                     borderRadius: 12,
-                    cursor: 'pointer',
+                    cursor: "pointer",
                     fontFamily: FONT,
-                    textAlign: 'left',
-                    transition: 'all .15s',
+                    textAlign: "left",
+                    transition: "all 0.15s ease",
                   }}
                 >
                   <div>
                     <span
                       style={{
-                        fontSize: 14,
-                        fontWeight: localFilters.sortBy === opt.id ? 700 : 600,
+                        fontSize: 15,
+                        fontWeight: localFilters.sortBy === opt.id ? 600 : 500,
                         color: BLACK,
-                        display: 'block',
+                        display: "block",
                       }}
                     >
                       {opt.label}
                     </span>
                     <span
                       style={{
-                        fontSize: 12,
-                        color: GRAY1,
+                        fontSize: 13,
+                        color: GRAY,
                         marginTop: 2,
-                        display: 'block',
+                        display: "block",
                       }}
                     >
                       {opt.desc}
@@ -224,11 +245,11 @@ export const FilterModal = ({
                       style={{
                         width: 20,
                         height: 20,
-                        borderRadius: '50%',
-                        background: ORANGE,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        borderRadius: "50%",
+                        background: ACCENT,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
                       <svg
@@ -255,15 +276,17 @@ export const FilterModal = ({
             <p
               style={{
                 fontFamily: FONT,
-                fontSize: 14,
-                fontWeight: 700,
-                color: BLACK,
+                fontSize: 13,
+                fontWeight: 600,
+                color: GRAY,
                 marginBottom: 12,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
               }}
             >
               Date Range
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {DATE_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
@@ -271,15 +294,19 @@ export const FilterModal = ({
                   style={{
                     background: localFilters.period === opt.id ? BLACK : WHITE,
                     color: localFilters.period === opt.id ? WHITE : BLACK,
-                    border: `1.5px solid ${localFilters.period === opt.id ? BLACK : GRAY2}`,
-                    borderRadius: 999,
-                    padding: '10px 18px',
-                    fontSize: 13,
-                    fontWeight: localFilters.period === opt.id ? 700 : 500,
-                    cursor: 'pointer',
+                    border: "none",
+                    borderRadius: 20,
+                    padding: "10px 18px",
+                    fontSize: 14,
+                    fontWeight: localFilters.period === opt.id ? 600 : 500,
+                    cursor: "pointer",
                     fontFamily: FONT,
-                    whiteSpace: 'nowrap',
-                    transition: 'all .15s',
+                    whiteSpace: "nowrap",
+                    transition: "all 0.15s ease",
+                    boxShadow:
+                      localFilters.period === opt.id
+                        ? "0 2px 8px rgba(0,0,0,0.15)"
+                        : "0 1px 3px rgba(0,0,0,0.08)",
                   }}
                 >
                   {opt.label}
@@ -294,31 +321,38 @@ export const FilterModal = ({
               <p
                 style={{
                   fontFamily: FONT,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: BLACK,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: GRAY,
                   marginBottom: 12,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
                 }}
               >
                 Distance
               </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {DISTANCE_OPTIONS.map((dist) => (
                   <button
                     key={dist}
                     onClick={() => handleDistanceChange(dist)}
                     style={{
-                      background: localFilters.distance === dist ? ORANGE : WHITE,
+                      background:
+                        localFilters.distance === dist ? ACCENT : WHITE,
                       color: localFilters.distance === dist ? WHITE : BLACK,
-                      border: 'none',
-                      borderRadius: 999,
-                      padding: '10px 18px',
-                      fontSize: 13,
-                      fontWeight: localFilters.distance === dist ? 700 : 500,
-                      cursor: 'pointer',
+                      border: "none",
+                      borderRadius: 20,
+                      padding: "10px 18px",
+                      fontSize: 14,
+                      fontWeight: localFilters.distance === dist ? 600 : 500,
+                      cursor: "pointer",
                       fontFamily: FONT,
-                      whiteSpace: 'nowrap',
-                      transition: 'all .15s',
+                      whiteSpace: "nowrap",
+                      transition: "all 0.15s ease",
+                      boxShadow:
+                        localFilters.distance === dist
+                          ? "0 2px 8px rgba(232,93,63,0.3)"
+                          : "0 1px 3px rgba(0,0,0,0.08)",
                     }}
                   >
                     {dist}km
@@ -333,31 +367,38 @@ export const FilterModal = ({
             <p
               style={{
                 fontFamily: FONT,
-                fontSize: 14,
-                fontWeight: 700,
-                color: BLACK,
+                fontSize: 13,
+                fontWeight: 600,
+                color: GRAY,
                 marginBottom: 12,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
               }}
             >
               Category
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {MAIN_CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => handleCategoryChange(cat.id)}
                   style={{
-                    background: localFilters.category === cat.id ? cat.color : WHITE,
+                    background:
+                      localFilters.category === cat.id ? cat.color : WHITE,
                     color: localFilters.category === cat.id ? WHITE : BLACK,
-                    border: 'none',
-                    borderRadius: 999,
-                    padding: '10px 18px',
-                    fontSize: 13,
-                    fontWeight: localFilters.category === cat.id ? 700 : 500,
-                    cursor: 'pointer',
+                    border: "none",
+                    borderRadius: 20,
+                    padding: "10px 18px",
+                    fontSize: 14,
+                    fontWeight: localFilters.category === cat.id ? 600 : 500,
+                    cursor: "pointer",
                     fontFamily: FONT,
-                    whiteSpace: 'nowrap',
-                    transition: 'all .15s',
+                    whiteSpace: "nowrap",
+                    transition: "all 0.15s ease",
+                    boxShadow:
+                      localFilters.category === cat.id
+                        ? "0 2px 8px rgba(0,0,0,0.15)"
+                        : "0 1px 3px rgba(0,0,0,0.08)",
                   }}
                 >
                   {cat.name}
@@ -370,11 +411,11 @@ export const FilterModal = ({
         {/* Footer Buttons */}
         <div
           style={{
-            display: 'flex',
+            display: "flex",
             gap: 12,
-            padding: '16px 20px 24px',
-            borderTop: `1px solid ${GRAY2}`,
-            position: 'sticky',
+            padding: "16px 20px 24px",
+            borderTop: `1px solid ${GRAY_LIGHT}`,
+            position: "sticky",
             bottom: 0,
             background: BG,
           }}
@@ -385,14 +426,14 @@ export const FilterModal = ({
               flex: 1,
               background: WHITE,
               color: BLACK,
-              border: `1.5px solid ${GRAY2}`,
-              borderRadius: 999,
-              padding: '14px 24px',
+              border: `1.5px solid ${GRAY_LIGHT}`,
+              borderRadius: 24,
+              padding: "14px 24px",
               fontSize: 15,
-              fontWeight: 700,
-              cursor: 'pointer',
+              fontWeight: 600,
+              cursor: "pointer",
               fontFamily: FONT,
-              transition: 'all .15s',
+              transition: "all 0.15s ease",
             }}
           >
             Reset
@@ -403,21 +444,30 @@ export const FilterModal = ({
               flex: 2,
               background: BLACK,
               color: WHITE,
-              border: 'none',
-              borderRadius: 999,
-              padding: '14px 24px',
+              border: "none",
+              borderRadius: 24,
+              padding: "14px 24px",
               fontSize: 15,
-              fontWeight: 700,
-              cursor: 'pointer',
+              fontWeight: 600,
+              cursor: "pointer",
               fontFamily: FONT,
-              transition: 'all .15s',
+              transition: "transform 0.15s ease",
             }}
+            onMouseDown={(e) =>
+              (e.currentTarget.style.transform = "scale(0.98)")
+            }
+            onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
           >
             Apply Filters
           </button>
         </div>
 
         <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
           @keyframes slideUp {
             from {
               transform: translateY(100%);

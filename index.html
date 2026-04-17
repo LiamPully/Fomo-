@@ -146,9 +146,56 @@
         background: #C75B39;
         color: white;
       }
+
+      /* Skip Link for Accessibility */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #000;
+        color: #fff;
+        padding: 8px 16px;
+        text-decoration: none;
+        font-family: system-ui, sans-serif;
+        font-size: 14px;
+        z-index: 9999;
+        border-radius: 0 0 4px 0;
+        transition: top 0.2s;
+      }
+
+      .skip-link:focus {
+        top: 0;
+        outline: 2px solid #fff;
+        outline-offset: -2px;
+      }
+
+      /* Reduced motion preference */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      /* Focus visible styles */
+      :focus-visible {
+        outline: 2px solid #E85D3F;
+        outline-offset: 2px;
+      }
+
+      /* High contrast mode adjustments */
+      @media (prefers-contrast: more) {
+        * {
+          border-color: currentColor !important;
+        }
+      }
     </style>
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
