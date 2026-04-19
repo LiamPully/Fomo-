@@ -26,32 +26,10 @@
       "has": [
         {
           "type": "host",
-          "value": "www.fomoza.co.za"
-        }
-      ],
-      "destination": "https://fomoza.co.za/:path*",
-      "permanent": true
-    },
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
           "value": "www.fomoza.app"
         }
       ],
-      "destination": "https://fomoza.co.za/:path*",
-      "permanent": true
-    },
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "fomoza.app"
-        }
-      ],
-      "destination": "https://fomoza.co.za/:path*",
+      "destination": "https://fomoza.app/:path*",
       "permanent": true
     }
   ],
