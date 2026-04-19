@@ -34,6 +34,51 @@ const SHADOW_CARD_HOVER = "0 0 0 1px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.0
 const SHADOW_BUTTON = "0 4px 12px rgba(0,0,0,0.08)";
 const SHADOW_NAV = "0 -2px 10px rgba(0,0,0,0.05)";
 
+// Scroll-aware hook for bottom nav
+const useScrollDirection = () => {
+  const [scrollDirection, setScrollDirection] = useState('up');
+  const [scrollY, setScrollY] = useState(0);
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
+  const NAV_HIDE_THRESHOLD = 80;
+
+  useEffect(() => {
+    const updateScrollDirection = () => {
+      const currentY = window.scrollY || document.documentElement.scrollTop;
+
+      if (Math.abs(currentY - lastScrollY.current) < 10) {
+        ticking.current = false;
+        return;
+      }
+
+      const direction = currentY > lastScrollY.current ? 'down' : 'up';
+
+      // Only hide nav if scrolled past threshold
+      if (direction === 'down' && currentY > NAV_HIDE_THRESHOLD) {
+        setScrollDirection('down');
+      } else if (direction === 'up' || currentY <= NAV_HIDE_THRESHOLD) {
+        setScrollDirection('up');
+      }
+
+      setScrollY(currentY);
+      lastScrollY.current = currentY;
+      ticking.current = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking.current) {
+        window.requestAnimationFrame(updateScrollDirection);
+        ticking.current = true;
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return { scrollDirection, scrollY };
+};
+
 // Icon Component - memoized to prevent re-renders
 const Icon = memo(({ name, size = 20, color = BLACK }) => {
   const icons = {
@@ -1188,8 +1233,8 @@ const SearchScreen = memo(({
 
 SearchScreen.displayName = 'SearchScreen';
 
-// Floating Dark Bottom Navigation with 3 icons
-const BottomNav = ({ activeTab, onTabChange }) => {
+// Floating Dark Bottom Navigation with 3 icons - Scroll Aware
+const BottomNav = ({ activeTab, onTabChange, visible = true }) => {
   const tabs = [
     { id: 'home', icon: 'home' },
     { id: 'events', icon: 'search' },
@@ -1201,9 +1246,12 @@ const BottomNav = ({ activeTab, onTabChange }) => {
       position: 'fixed',
       bottom: 20,
       left: '50%',
-      transform: 'translateX(-50%)',
+      transform: `translateX(-50%) translateY(${visible ? '0' : '100px'})`,
       zIndex: 100,
       maxWidth: 400,
+      opacity: visible ? 1 : 0,
+      transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+      pointerEvents: visible ? 'auto' : 'none',
     }}>
       <div style={{
         display: 'flex',
@@ -1216,6 +1264,7 @@ const BottomNav = ({ activeTab, onTabChange }) => {
         padding: '8px',
         paddingBottom: 'calc(8px + env(safe-area-inset-bottom))',
         boxShadow: '0 8px 32px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2)',
+        border: '1px solid rgba(255,255,255,0.1)',
       }}>
         {tabs.map(tab => {
           const isActive = activeTab === tab.id;
@@ -1446,12 +1495,8 @@ export default function App() {
   const [showLoc, setShowLoc] = useState(true);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
 
-  // Airbnb-style scroll behavior for header
-  const { isScrolled, scrollDirection } = useScrollPosition({
-    threshold: 50,
-    hideOnScrollDown: true,
-    hideThreshold: 100,
-  });
+  // Scroll-aware bottom nav behavior
+  const { scrollDirection } = useScrollDirection();
   const [locLabel, setLocLabel] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -1732,11 +1777,14 @@ export default function App() {
           width: '100%',
           maxWidth: 430,
           margin: '0 auto',
-          minHeight: '100dvh',
+          height: '100dvh',
+          maxHeight: '100dvh',
           background: BG,
           position: 'relative',
           fontFamily: FONT,
-          overflowX: 'hidden',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         {/* Notification Toast with ARIA live region */}
@@ -1771,8 +1819,19 @@ export default function App() {
           )}
         </div>
 
-        {/* Main Content */}
-        <main id="main-content" style={{ paddingBottom: 100 }} role="main">
+        {/* Main Content - Scrollable Container */}
+        <main
+          id="main-content"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+            position: 'relative',
+            paddingBottom: 'calc(100px + env(safe-area-inset-bottom))',
+          }}
+          role="main"
+        >
           {/* Home Screen */}
           {tab === "home" && (
             <HomeScreen
@@ -1817,8 +1876,12 @@ export default function App() {
 
         </main>
 
-        {/* Bottom Navigation */}
-        <BottomNav activeTab={tab} onTabChange={handleTab} />
+        {/* Bottom Navigation - Fixed with scroll-aware visibility */}
+        <BottomNav
+          activeTab={tab}
+          onTabChange={handleTab}
+          visible={scrollDirection === 'up'}
+        />
 
         {/* Location Picker Modal */}
         <LocationPickerModal

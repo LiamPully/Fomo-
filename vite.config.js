@@ -121,6 +121,18 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       // Minify and optimize for production
       minify: isProduction ? 'terser' : false,
+      // Increase chunk size warning limit (default is 500)
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Split vendor libraries into separate chunks
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+            'vendor-neon': ['@neondatabase/serverless'],
+          }
+        }
+      },
       terserOptions: isProduction ? {
         compress: {
           drop_console: true, // Remove console.log in production

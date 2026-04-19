@@ -15,10 +15,10 @@
     "db:verify": "node scripts/verify-database.js"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.0",
     "@supabase/supabase-js": "^2.99.1",
     "@types/react": "~19.2.10",
     "@types/react-dom": "~19.1.7",
-    "@vercel/postgres": "^0.10.0",
     "expo": "^55.0.6",
     "expo-status-bar": "~55.0.4",
     "jose": "^6.2.2",
