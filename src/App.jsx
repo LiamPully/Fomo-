@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
 import { useLocation } from "./hooks/useLocation";
 import { useAuth } from "./hooks/useAuth";
+import { useScrollPosition } from "./hooks/useScrollPosition";
 import { MAIN_CATEGORIES, getCategoryColor } from "./lib/categories";
 import { fetchEvents, createEvent, updateEvent, deleteEvent } from "./api/events";
 import { canPublishEvent } from "./api/businesses";
@@ -8,15 +9,16 @@ import { calculateDistance } from "./lib/location";
 import CategoryDropdown from "./components/CategoryDropdown";
 import FilterModal from "./components/FilterModal";
 import { SkeletonList } from "./components/SkeletonCard";
+import EmptyState from "./components/EmptyState";
 import LocationSearch from "./components/LocationSearch";
 import AuthModal from "./components/AuthModal";
 import CreateEvent from "./components/CreateEvent";
 import AccountScreen from "./components/AccountScreen";
 import EditProfileModal from "./components/EditProfileModal";
 import ErrorBoundary from "./components/ErrorBoundary";
-import "./styles/modern-design.css";
+import "./styles/airbnb-inspired.css";
 
-// Modern Design Tokens
+// Airbnb-Inspired Design Tokens (kept current warm colors)
 const BG = "#F8F9FA";
 const WHITE = "#FFFFFF";
 const BLACK = "#1A1A1A";
@@ -26,8 +28,14 @@ const GRAY_MEDIUM = "#80868B";
 const ACCENT = "#E85D3F";
 const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-// Icon Component
-const Icon = ({ name, size = 20, color = BLACK }) => {
+// Airbnb Shadow System (three-layer warm shadows)
+const SHADOW_CARD = "0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.1)";
+const SHADOW_CARD_HOVER = "0 0 0 1px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.12)";
+const SHADOW_BUTTON = "0 4px 12px rgba(0,0,0,0.08)";
+const SHADOW_NAV = "0 -2px 10px rgba(0,0,0,0.05)";
+
+// Icon Component - memoized to prevent re-renders
+const Icon = memo(({ name, size = 20, color = BLACK }) => {
   const icons = {
     search: <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" />,
     location: <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />,
@@ -47,6 +55,8 @@ const Icon = ({ name, size = 20, color = BLACK }) => {
     eye: <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" /><circle cx="12" cy="12" r="3" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" /></>,
     clock: <><circle cx="12" cy="12" r="10" stroke={color} strokeWidth="2" fill="none" /><polyline points="12 6 12 12 16 14" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" /></>,
     map: <><polygon points="1 6 1 22 8 18 16 22 21 18 21 2 15 6 8 2 1 6" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" /><line x1="8" y1="2" x2="8" y2="18" stroke={color} strokeWidth="2" /><line x1="16" y1="6" x2="16" y2="22" stroke={color} strokeWidth="2" /></>,
+    home: <><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /><polyline points="9 22 9 12 15 12 15 22" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></>,
+    qr: <><rect x="3" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="2" fill="none" /><rect x="14" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth="2" fill="none" /><rect x="3" y="14" width="7" height="7" rx="1" stroke={color} strokeWidth="2" fill="none" /><path d="M17 17h-2v-2h2v2zm-4 0h-2v-2h2v2zm4-4h-2v-2h2v2zm-4-4h-2V7h2v2z" fill={color} /></>,
   };
 
   return (
@@ -54,11 +64,113 @@ const Icon = ({ name, size = 20, color = BLACK }) => {
       {icons[name] || null}
     </svg>
   );
+});
+
+Icon.displayName = 'Icon';
+
+// Airbnb-Style Category Pill
+const CategoryPill = memo(({ label, isActive, color, onClick }) => {
+  const [isPressed, setIsPressed] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      onMouseLeave={() => setIsPressed(false)}
+      onTouchStart={() => setIsPressed(true)}
+      onTouchEnd={() => setIsPressed(false)}
+      style={{
+        padding: '10px 18px',
+        borderRadius: 9999, // Full pill
+        border: 'none',
+        background: isActive ? (color || BLACK) : WHITE,
+        color: isActive ? WHITE : GRAY,
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        transform: isPressed ? 'scale(0.95)' : 'scale(1)',
+        transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+        boxShadow: isActive ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
+      }}
+    >
+      {label}
+    </button>
+  );
+});
+
+CategoryPill.displayName = 'CategoryPill';
+
+// Airbnb-Style Contact Button for Event Detail
+const ContactButton = ({ href, icon, label, variant = 'default', external }) => {
+  const [isPressed, setIsPressed] = useState(false);
+
+  const variants = {
+    default: {
+      bg: GRAY_LIGHT,
+      color: BLACK,
+      iconColor: BLACK,
+    },
+    whatsapp: {
+      bg: '#25D366',
+      color: WHITE,
+      iconColor: WHITE,
+    },
+    dark: {
+      bg: BLACK,
+      color: WHITE,
+      iconColor: WHITE,
+    },
+    instagram: {
+      bg: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
+      color: WHITE,
+      iconColor: WHITE,
+    },
+  };
+
+  const style = variants[variant];
+
+  const Component = external ? 'a' : 'a';
+  const props = external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+
+  return (
+    <Component
+      href={href}
+      {...props}
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      onMouseLeave={() => setIsPressed(false)}
+      onTouchStart={() => setIsPressed(true)}
+      onTouchEnd={() => setIsPressed(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '12px 20px',
+        background: style.bg,
+        borderRadius: 9999, // Full pill
+        fontSize: 14,
+        color: style.color,
+        textDecoration: 'none',
+        fontWeight: 600,
+        transform: isPressed ? 'scale(0.96)' : 'scale(1)',
+        transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+        boxShadow: isPressed
+          ? '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.08)'
+          : SHADOW_CARD,
+      }}
+    >
+      <Icon name={icon} size={16} color={style.iconColor} />
+      {label}
+    </Component>
+  );
 };
 
-// Modern Event Card
-const EventCard = ({ event, onClick, onEdit, onDelete, showActions }) => {
+// Airbnb-Style Event Card with Three-Layer Shadow
+const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions }) => {
   const [isPressed, setIsPressed] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const categoryColors = {
@@ -72,25 +184,45 @@ const EventCard = ({ event, onClick, onEdit, onDelete, showActions }) => {
   };
   const catColor = categoryColors[event.category] || GRAY;
 
+  // Three-layer Airbnb shadow system
+  const getShadow = () => {
+    if (isPressed) {
+      return '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.08)';
+    }
+    if (isHovered) {
+      return SHADOW_CARD_HOVER;
+    }
+    return SHADOW_CARD;
+  };
+
   return (
     <div
       onClick={() => !showActions && onClick(event)}
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
-      onMouseLeave={() => setIsPressed(false)}
+      onMouseLeave={() => { setIsPressed(false); setIsHovered(false); }}
+      onMouseEnter={() => setIsHovered(true)}
       onTouchStart={() => setIsPressed(true)}
       onTouchEnd={() => setIsPressed(false)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          !showActions && onClick(event);
+        }
+      }}
+      role={showActions ? undefined : 'button'}
+      tabIndex={showActions ? undefined : 0}
+      aria-label={`View event: ${event.title}, ${event.category}, ${event.dateLabel}`}
       style={{
         background: WHITE,
-        borderRadius: 16,
+        borderRadius: 20, // Airbnb uses 20px for cards
         overflow: 'hidden',
         cursor: showActions ? 'default' : 'pointer',
-        marginBottom: 12,
+        marginBottom: 16,
         transform: isPressed ? 'scale(0.98)' : 'scale(1)',
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-        boxShadow: isPressed
-          ? '0 2px 8px rgba(0,0,0,0.08)'
-          : '0 4px 12px rgba(0,0,0,0.05)',
+        transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        boxShadow: getShadow(),
+        outline: 'none',
       }}
     >
       {/* Image */}
@@ -99,6 +231,8 @@ const EventCard = ({ event, onClick, onEdit, onDelete, showActions }) => {
           <img
             src={event.img}
             alt={event.title}
+            loading="lazy"
+            decoding="async"
             onError={() => setImgError(true)}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
@@ -114,20 +248,36 @@ const EventCard = ({ event, onClick, onEdit, onDelete, showActions }) => {
         )}
         {event.today && (
           <div style={{
-            position: 'absolute', top: 12, left: 12,
-            background: ACCENT, color: WHITE,
-            padding: '4px 10px', borderRadius: 20,
-            fontSize: 11, fontWeight: 700,
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            background: ACCENT,
+            color: WHITE,
+            padding: '6px 12px',
+            borderRadius: 9999, // Full pill
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
           }}>
             Today
           </div>
         )}
         {event.status === 'draft' && (
           <div style={{
-            position: 'absolute', top: 12, left: 12,
-            background: GRAY, color: WHITE,
-            padding: '4px 10px', borderRadius: 20,
-            fontSize: 11, fontWeight: 700,
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            background: GRAY,
+            color: WHITE,
+            padding: '6px 12px',
+            borderRadius: 9999,
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
           }}>
             Draft
           </div>
@@ -135,22 +285,28 @@ const EventCard = ({ event, onClick, onEdit, onDelete, showActions }) => {
       </div>
 
       {/* Content */}
-      <div style={{ padding: '14px 16px 16px' }}>
+      <div style={{ padding: '16px' }}>
         <div style={{
           display: 'inline-block',
-          padding: '3px 8px',
-          borderRadius: 6,
+          padding: '4px 10px',
+          borderRadius: 8,
           background: `${catColor}15`,
           color: catColor,
-          fontSize: 11, fontWeight: 600,
-          marginBottom: 8,
+          fontSize: 12,
+          fontWeight: 600,
+          marginBottom: 10,
+          letterSpacing: '-0.2px',
         }}>
           {event.category}
         </div>
 
         <h3 style={{
-          fontSize: 17, fontWeight: 700, color: BLACK,
-          marginBottom: 6, lineHeight: 1.3,
+          fontSize: 16,
+          fontWeight: 700,
+          color: BLACK,
+          marginBottom: 8,
+          lineHeight: 1.3,
+          letterSpacing: '-0.3px',
         }}>
           {event.title}
         </h3>
@@ -220,104 +376,209 @@ const EventCard = ({ event, onClick, onEdit, onDelete, showActions }) => {
       </div>
     </div>
   );
-};
+});
 
-// Modern Bottom Navigation
-const BottomNav = ({ activeTab, onTabChange }) => {
-  const tabs = [
-    { id: 'events', label: 'Discover', icon: 'search' },
-    { id: 'hub', label: 'Profile', icon: 'user' },
-    { id: 'about', label: 'About', icon: 'info' },
-  ];
+EventCard.displayName = 'EventCard';
+
+// Category Card for 2-column grid
+const CategoryCard = memo(({ category, onClick }) => {
+  const [isPressed, setIsPressed] = useState(false);
 
   return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0,
-      background: 'rgba(255,255,255,0.95)',
-      backdropFilter: 'blur(20px)',
-      borderTop: '1px solid rgba(0,0,0,0.05)',
-      paddingBottom: 'env(safe-area-inset-bottom)',
-      zIndex: 100,
-    }}>
-      <div style={{
-        maxWidth: 430, margin: '0 auto',
-        display: 'flex', justifyContent: 'space-around',
-        padding: '10px 0',
-      }}>
-        {tabs.map(tab => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: 4, padding: '6px 20px',
-                background: 'transparent', border: 'none',
-                cursor: 'pointer',
-              }}
-              aria-label={tab.label}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <div style={{
-                padding: isActive ? '6px 16px' : '6px 0',
-                borderRadius: 20,
-                background: isActive ? BLACK : 'transparent',
-                transition: 'all 0.2s ease',
-              }}>
-                <Icon
-                  name={tab.icon}
-                  size={20}
-                  color={isActive ? WHITE : GRAY}
-                />
-              </div>
-              <span style={{
-                fontSize: 11, fontWeight: isActive ? 600 : 500,
-                color: isActive ? BLACK : GRAY,
-              }}>
-                {tab.label}
-              </span>
-            </button>
-          );
-        })}
+    <button
+      onClick={onClick}
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      onMouseLeave={() => setIsPressed(false)}
+      onTouchStart={() => setIsPressed(true)}
+      onTouchEnd={() => setIsPressed(false)}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px 16px',
+        background: WHITE,
+        borderRadius: 16,
+        border: 'none',
+        cursor: 'pointer',
+        boxShadow: SHADOW_CARD,
+        transform: isPressed ? 'scale(0.96)' : 'scale(1)',
+        transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+      }}
+    >
+      <div
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 12,
+          background: `${category.color}15`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 12,
+          fontSize: 24,
+        }}
+      >
+        {category.emoji}
+      </div>
+      <span
+        style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: BLACK,
+          textAlign: 'center',
+        }}
+      >
+        {category.name}
+      </span>
+    </button>
+  );
+});
+
+CategoryCard.displayName = 'CategoryCard';
+
+// Horizontal Event Card for Upcoming Events
+const HorizontalEventCard = memo(({ event, onClick }) => {
+  const [isPressed, setIsPressed] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const catColors = {
+    'Market': '#1E8E3E',
+    'Fun': '#9334E6',
+    'Event': '#E85D3F',
+    'Other': '#5F6368',
+    'Food & Drink': '#DC2626',
+    'Music': '#7C3AED',
+    'Markets': '#E8783A',
+  };
+
+  return (
+    <div
+      onClick={() => onClick(event)}
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      onMouseLeave={() => setIsPressed(false)}
+      onTouchStart={() => setIsPressed(true)}
+      onTouchEnd={() => setIsPressed(false)}
+      style={{
+        flex: '0 0 auto',
+        width: 260,
+        background: WHITE,
+        borderRadius: 16,
+        overflow: 'hidden',
+        boxShadow: isPressed
+          ? '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.08)'
+          : SHADOW_CARD,
+        transform: isPressed ? 'scale(0.98)' : 'scale(1)',
+        transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+        cursor: 'pointer',
+      }}
+    >
+      {/* Image */}
+      <div style={{ position: 'relative', height: 140 }}>
+        <img
+          src={imgError ? `https://picsum.photos/seed/${event.id}/400/250` : event.img}
+          alt={event.title}
+          onError={() => setImgError(true)}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+        />
+        {/* Category badge */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            padding: '6px 12px',
+            background: catColors[event.category] || GRAY,
+            borderRadius: 20,
+            fontSize: 11,
+            fontWeight: 700,
+            color: WHITE,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
+          {event.category}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '14px' }}>
+        <h3
+          style={{
+            fontSize: 16,
+            fontWeight: 700,
+            color: BLACK,
+            marginBottom: 6,
+            lineHeight: 1.3,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {event.title}
+        </h3>
+        <p
+          style={{
+            fontSize: 13,
+            color: GRAY,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          <Icon name="calendar" size={14} color={GRAY} />
+          {event.dateLabel}
+        </p>
       </div>
     </div>
   );
-};
+});
 
-// Search Bar Component
-const SearchBar = ({ value, onChange, onClear }) => {
-  const inputRef = useRef(null);
+HorizontalEventCard.displayName = 'HorizontalEventCard';
+
+// Search Bar with filter icon inside
+const HomeSearchBar = memo(({ value, onChange, onClear }) => {
+  const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      background: WHITE,
-      borderRadius: 12,
-      padding: '10px 14px',
-      marginBottom: 16,
-      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-    }}>
-      <Icon name="search" size={18} color={GRAY} />
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        background: WHITE,
+        borderRadius: 32,
+        padding: '12px 16px',
+        boxShadow: isFocused ? SHADOW_CARD_HOVER : SHADOW_CARD,
+        transition: 'box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+      }}
+    >
+      <Icon name="search" size={20} color={GRAY} />
       <input
-        ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         placeholder="Search events..."
         style={{
           flex: 1,
           border: 'none',
           outline: 'none',
-          fontSize: 15,
+          fontSize: 16,
           fontFamily: FONT,
           background: 'transparent',
+          color: BLACK,
         }}
-        aria-label="Search events"
       />
-      {value && (
+      {value ? (
         <button
           onClick={onClear}
           style={{
@@ -329,11 +590,665 @@ const SearchBar = ({ value, onChange, onClear }) => {
             alignItems: 'center',
             justifyContent: 'center',
           }}
-          aria-label="Clear search"
         >
           <Icon name="x" size={16} color={GRAY} />
         </button>
+      ) : (
+        <Icon name="filter" size={18} color={GRAY} />
       )}
+    </div>
+  );
+});
+
+HomeSearchBar.displayName = 'HomeSearchBar';
+
+// Main Home Screen Component - Simplified (Home Tab)
+const HomeScreen = memo(({
+  user,
+  location,
+  events,
+  eventsLoading,
+  onEventClick,
+  onSeeAllClick,
+  onSetLocation,
+}) => {
+  // Category data with emojis
+  const categories = [
+    { id: 'food-drink', name: 'Food & Drink', emoji: '🍔', color: '#DC2626' },
+    { id: 'music', name: 'Music', emoji: '🎵', color: '#7C3AED' },
+    { id: 'markets', name: 'Markets', emoji: '🛍️', color: '#E8783A' },
+    { id: 'sport-fitness', name: 'Sports', emoji: '⚽', color: '#0891B2' },
+    { id: 'community', name: 'Community', emoji: '🤝', color: '#059669' },
+    { id: 'nightlife', name: 'Nightlife', emoji: '🌃', color: '#7C3AED' },
+  ];
+
+  // Get upcoming events (first 6)
+  const upcomingEvents = useMemo(() => {
+    return events
+      .filter(e => e.status !== 'removed' && new Date(e.start) > new Date())
+      .sort((a, b) => new Date(a.start) - new Date(b.start))
+      .slice(0, 6);
+  }, [events]);
+
+  return (
+    <div style={{ padding: '16px', paddingBottom: 100 }}>
+      {/* Welcome Header */}
+      <div style={{ marginBottom: 28 }}>
+        <p style={{ fontSize: 14, color: GRAY, marginBottom: 4 }}>
+          Welcome Back!
+        </p>
+        <h1 style={{
+          fontSize: 26,
+          fontWeight: 800,
+          color: BLACK,
+          marginBottom: 8,
+          letterSpacing: '-0.5px',
+        }}>
+          {user?.firstName || 'Guest'}
+        </h1>
+        {/* Location Display - Always visible and tappable */}
+        <button
+          onClick={onSetLocation}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 13,
+            color: location?.name ? GRAY : ACCENT,
+            background: 'none',
+            border: 'none',
+            padding: '4px 0',
+            cursor: 'pointer',
+            fontFamily: FONT,
+          }}
+        >
+          <Icon name="location" size={14} color={location?.name ? GRAY : ACCENT} />
+          {location?.name || 'Set your location'}
+        </button>
+      </div>
+
+      {/* Upcoming Events - Horizontal Scroll */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 16,
+        }}>
+          <h2 style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: BLACK,
+          }}>
+            Upcoming Events
+          </h2>
+          <button
+            onClick={onSeeAllClick}
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: ACCENT,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            See All
+          </button>
+        </div>
+
+        {eventsLoading ? (
+          <div style={{
+            display: 'flex',
+            gap: 12,
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+          }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{
+                flex: '0 0 auto',
+                width: 260,
+                height: 220,
+                background: GRAY_LIGHT,
+                borderRadius: 16,
+              }} />
+            ))}
+          </div>
+        ) : upcomingEvents.length > 0 ? (
+          <div style={{
+            display: 'flex',
+            gap: 12,
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            marginLeft: -16,
+            marginRight: -16,
+            paddingLeft: 16,
+            paddingRight: 16,
+            paddingBottom: 8,
+            WebkitOverflowScrolling: 'touch',
+          }}
+          >
+            {upcomingEvents.map((ev) => (
+              <HorizontalEventCard
+                key={ev.id}
+                event={ev}
+                onClick={onEventClick}
+              />
+            ))}
+            {/* Peek effect spacer */}
+            <div style={{ flex: '0 0 16px' }} />
+          </div>
+        ) : (
+          <EmptyState
+            variant="events"
+            title="No upcoming events"
+            description="Check back soon for new events!"
+          />
+        )}
+      </div>
+
+      {/* Event Categories - 2 Column Grid */}
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: BLACK,
+          marginBottom: 16,
+        }}>
+          Browse by Category
+        </h2>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 12,
+        }}>
+          {categories.map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              onClick={onSeeAllClick}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+HomeScreen.displayName = 'HomeScreen';
+
+// Location Picker Modal Component
+const LocationPickerModal = memo(({
+  isOpen,
+  onClose,
+  currentLocation,
+  onUseCurrentLocation,
+  onSelectLocation,
+}) => {
+  const [activeTab, setActiveTab] = useState('current'); // 'current' or 'manual'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [predictions, setPredictions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [permissionError, setPermissionError] = useState(null);
+  const inputRef = useRef(null);
+
+  // Debounced search for places
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 3) {
+      setPredictions([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        const { searchPlaces } = await import('./lib/location');
+        const result = await searchPlaces(searchQuery);
+        if (result.predictions) {
+          setPredictions(result.predictions.slice(0, 5));
+        }
+      } catch (err) {
+        console.error('Search error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Handle use current location
+  const handleUseCurrentLocation = async () => {
+    setPermissionError(null);
+    try {
+      const position = await onUseCurrentLocation();
+      if (position) {
+        onClose();
+      } else {
+        setPermissionError('Location permission denied. Please enable location services or enter manually.');
+      }
+    } catch (err) {
+      setPermissionError('Unable to get your location. Please try again or enter manually.');
+    }
+  };
+
+  // Handle location selection
+  const handleSelectPrediction = async (prediction) => {
+    try {
+      const { geocodeAddress } = await import('./lib/location');
+      const result = await geocodeAddress(prediction.description);
+      if (result.location) {
+        onSelectLocation(result.location.lat, result.location.lng, prediction.description);
+        onClose();
+      }
+    } catch (err) {
+      console.error('Geocoding error:', err);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 300,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-end',
+        animation: 'fadeIn 0.2s ease',
+      }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        style={{
+          background: WHITE,
+          borderRadius: '20px 20px 0 0',
+          padding: '24px 20px 40px',
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          animation: 'slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        }}
+      >
+        {/* Handle bar */}
+        <div
+          style={{
+            width: 36,
+            height: 4,
+            borderRadius: 2,
+            background: GRAY_LIGHT,
+            margin: '0 auto 20px',
+          }}
+        />
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: BLACK, margin: 0 }}>
+            Set Location
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Icon name="x" size={24} color={GRAY} />
+          </button>
+        </div>
+
+        {/* Tab Switcher */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+          <button
+            onClick={() => setActiveTab('current')}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              borderRadius: 12,
+              border: 'none',
+              background: activeTab === 'current' ? BLACK : GRAY_LIGHT,
+              color: activeTab === 'current' ? WHITE : BLACK,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: FONT,
+            }}
+          >
+            Use Current Location
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('manual');
+              setTimeout(() => inputRef.current?.focus(), 100);
+            }}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              borderRadius: 12,
+              border: 'none',
+              background: activeTab === 'manual' ? BLACK : GRAY_LIGHT,
+              color: activeTab === 'manual' ? WHITE : BLACK,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: FONT,
+            }}
+          >
+            Enter Address
+          </button>
+        </div>
+
+        {/* Current Location Tab */}
+        {activeTab === 'current' && (
+          <div>
+            <button
+              onClick={handleUseCurrentLocation}
+              style={{
+                width: '100%',
+                padding: '16px',
+                background: ACCENT,
+                color: WHITE,
+                border: 'none',
+                borderRadius: 12,
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                fontFamily: FONT,
+              }}
+            >
+              <Icon name="location" size={18} color={WHITE} />
+              Use My Current Location
+            </button>
+
+            {currentLocation?.name && (
+              <div style={{ marginTop: 16, padding: 12, background: GRAY_LIGHT, borderRadius: 8 }}>
+                <p style={{ margin: 0, fontSize: 13, color: GRAY }}>Current location:</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: 14, fontWeight: 600, color: BLACK }}>{currentLocation.name}</p>
+              </div>
+            )}
+
+            {permissionError && (
+              <div style={{ marginTop: 16, padding: 12, background: '#FEE2E2', borderRadius: 8 }}>
+                <p style={{ margin: 0, fontSize: 13, color: ACCENT }}>{permissionError}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Manual Entry Tab */}
+        {activeTab === 'manual' && (
+          <div>
+            <div style={{ position: 'relative', marginBottom: 16 }}>
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Enter your address or area..."
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  paddingLeft: 44,
+                  border: `1.5px solid ${GRAY_LIGHT}`,
+                  borderRadius: 12,
+                  fontSize: 15,
+                  fontFamily: FONT,
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = ACCENT;
+                  e.target.style.boxShadow = `0 0 0 3px ${ACCENT_LIGHT}`;
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = GRAY_LIGHT;
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+              <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}>
+                <Icon name="search" size={18} color={GRAY} />
+              </div>
+            </div>
+
+            {/* Predictions */}
+            {isLoading && (
+              <p style={{ textAlign: 'center', color: GRAY, fontSize: 14 }}>Searching...</p>
+            )}
+
+            {predictions.length > 0 && (
+              <div style={{ border: `1px solid ${GRAY_LIGHT}`, borderRadius: 12, overflow: 'hidden' }}>
+                {predictions.map((prediction, index) => (
+                  <button
+                    key={prediction.place_id}
+                    onClick={() => handleSelectPrediction(prediction)}
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px',
+                      background: index % 2 === 0 ? WHITE : GRAY_LIGHT,
+                      border: 'none',
+                      borderBottom: index < predictions.length - 1 ? `1px solid ${GRAY_LIGHT}` : 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      fontFamily: FONT,
+                    }}
+                  >
+                    {prediction.description}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {searchQuery.length >= 3 && !isLoading && predictions.length === 0 && (
+              <p style={{ textAlign: 'center', color: GRAY, fontSize: 14 }}>No results found</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+});
+
+LocationPickerModal.displayName = 'LocationPickerModal';
+
+// Search Screen Component (Events/Discover Tab)
+const SearchScreen = memo(({
+  events,
+  filteredEvents,
+  eventsLoading,
+  searchQuery,
+  setSearchQuery,
+  cat,
+  setCat,
+  onEventClick,
+}) => {
+  return (
+    <div style={{ padding: '16px', paddingBottom: 100 }}>
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{
+          fontSize: 26, fontWeight: 800, color: BLACK,
+          marginBottom: 4, letterSpacing: '-0.5px',
+        }}>
+          Discover
+        </h1>
+        <p style={{ fontSize: 14, color: GRAY }}>
+          Find local markets & events near you
+        </p>
+      </div>
+
+      {/* Search Bar */}
+      <div style={{ marginBottom: 20 }}>
+        <HomeSearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onClear={() => setSearchQuery('')}
+        />
+      </div>
+
+      {/* Category Pills - Horizontal Scroll */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 10,
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          marginBottom: 20,
+          paddingBottom: 8,
+          marginLeft: -16,
+          marginRight: -16,
+          paddingLeft: 16,
+          paddingRight: 16,
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        <CategoryPill
+          label="All"
+          isActive={cat === "all"}
+          onClick={() => setCat("all")}
+        />
+        {MAIN_CATEGORIES.slice(0, 6).map(c => (
+          <CategoryPill
+            key={c.id}
+            label={c.name}
+            isActive={cat === c.id}
+            color={c.color}
+            onClick={() => setCat(c.id)}
+          />
+        ))}
+      </div>
+
+      {/* Events Count */}
+      <div style={{ marginBottom: 16 }}>
+        <span style={{ fontSize: 13, color: GRAY }}>
+          {eventsLoading ? 'Loading...' : `${filteredEvents.length} events`}
+        </span>
+      </div>
+
+      {/* Events List */}
+      {eventsLoading ? (
+        <SkeletonList count={3} />
+      ) : filteredEvents.length > 0 ? (
+        <div className="event-grid" style={{ display: 'contents' }}>
+          {filteredEvents.map(ev => (
+            <EventCard
+              key={ev.id}
+              event={ev}
+              onClick={onEventClick}
+            />
+          ))}
+        </div>
+      ) : searchQuery ? (
+        <EmptyState
+          variant="search"
+          icon="🔍"
+          title={`No results for "${searchQuery}"`}
+          description="Try adjusting your search or filter to find what you're looking for."
+          actionLabel="Clear Search"
+          onAction={() => setSearchQuery('')}
+        />
+      ) : (
+        <EmptyState
+          variant="events"
+          icon="📅"
+          title="No events yet"
+          description="Check back soon for exciting events in your area!"
+        />
+      )}
+    </div>
+  );
+});
+
+SearchScreen.displayName = 'SearchScreen';
+
+// Floating Dark Bottom Navigation with 3 icons
+const BottomNav = ({ activeTab, onTabChange }) => {
+  const tabs = [
+    { id: 'home', icon: 'home' },
+    { id: 'events', icon: 'search' },
+    { id: 'profile', icon: 'user' },
+  ];
+
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: 20,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 100,
+      maxWidth: 400,
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        background: 'rgba(26,26,26,0.95)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRadius: 999,
+        padding: '8px',
+        paddingBottom: 'calc(8px + env(safe-area-inset-bottom))',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2)',
+      }}>
+        {tabs.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 56,
+                height: 44,
+                background: isActive ? ACCENT : 'transparent',
+                borderRadius: 999,
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.92)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              aria-label={tab.id}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <Icon
+                name={tab.icon}
+                size={22}
+                color={isActive ? WHITE : GRAY}
+              />
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -522,155 +1437,21 @@ const MyEventsScreen = ({ events, businessId, onBack, onCreate, onEdit, onDelete
   );
 };
 
-// About Screen
-const AboutScreen = () => {
-  const appVersion = "1.0.0";
-
-  return (
-    <div style={{ padding: '16px 16px 100px' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: BLACK, marginBottom: 8 }}>
-          About
-        </h1>
-        <p style={{ fontSize: 15, color: GRAY, lineHeight: 1.6 }}>
-          Discover local markets, events, and happenings in your area.
-        </p>
-      </div>
-
-      {/* App Info Card */}
-      <div style={{
-        background: WHITE,
-        borderRadius: 16,
-        padding: 24,
-        marginBottom: 16,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-      }}>
-        <div style={{
-          width: 64,
-          height: 64,
-          borderRadius: 16,
-          background: ACCENT,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 16,
-          fontSize: 28,
-        }}>
-          🎯
-        </div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: BLACK, marginBottom: 4 }}>
-          FOMO ZA
-        </h2>
-        <p style={{ fontSize: 14, color: GRAY }}>
-          Version {appVersion}
-        </p>
-        <p style={{ fontSize: 15, color: GRAY, lineHeight: 1.6, marginTop: 12 }}>
-          Your go-to app for discovering local events, markets, and happenings across South Africa.
-          Never miss out on what's happening near you.
-        </p>
-      </div>
-
-      {/* Features */}
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: GRAY,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          marginBottom: 12,
-        }}>
-          Features
-        </h2>
-        {[
-          { icon: '📍', title: 'Location-based discovery', desc: 'Find events near you' },
-          { icon: '🔔', title: 'Real-time updates', desc: 'Latest events as they happen' },
-          { icon: '📱', title: 'Easy event creation', desc: 'Publish your events in minutes' },
-          { icon: '🎨', title: 'Beautiful design', desc: 'Clean, modern interface' },
-        ].map((feature, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-            padding: '14px 16px',
-            background: WHITE,
-            borderRadius: 12,
-            marginBottom: 8,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          }}>
-            <span style={{ fontSize: 24 }}>{feature.icon}</span>
-            <div>
-              <p style={{ fontSize: 15, fontWeight: 600, color: BLACK }}>{feature.title}</p>
-              <p style={{ fontSize: 13, color: GRAY }}>{feature.desc}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Links */}
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: GRAY,
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          marginBottom: 12,
-        }}>
-          Legal
-        </h2>
-        {[
-          { label: 'Terms of Service', action: () => {} },
-          { label: 'Privacy Policy', action: () => {} },
-          { label: 'Contact Support', action: () => {} },
-        ].map((link, i) => (
-          <button
-            key={i}
-            onClick={link.action}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 16px',
-              background: WHITE,
-              border: 'none',
-              borderRadius: 12,
-              marginBottom: 8,
-              cursor: 'pointer',
-              fontSize: 15,
-              fontWeight: 500,
-              color: BLACK,
-              fontFamily: FONT,
-            }}
-          >
-            {link.label}
-            <Icon name="chevronRight" size={16} color={GRAY} />
-          </button>
-        ))}
-      </div>
-
-      {/* Footer */}
-      <p style={{
-        textAlign: 'center',
-        fontSize: 13,
-        color: GRAY,
-        marginTop: 32,
-      }}>
-        Made with ❤️ in South Africa
-      </p>
-    </div>
-  );
-};
-
 // Main App
 export default function App() {
-  const [tab, setTab] = useState("events");
+  const [tab, setTab] = useState("home");
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showLoc, setShowLoc] = useState(true);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+
+  // Airbnb-style scroll behavior for header
+  const { isScrolled, scrollDirection } = useScrollPosition({
+    threshold: 50,
+    hideOnScrollDown: true,
+    hideThreshold: 100,
+  });
   const [locLabel, setLocLabel] = useState(null);
   const [showAuth, setShowAuth] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -787,11 +1568,24 @@ export default function App() {
     return result;
   }, [signIn]);
 
-  const handleRegister = useCallback(async (email, password, name) => {
-    const result = await signUp(email, password, name);
+  const handleRegister = useCallback(async (registrationData) => {
+    const result = await signUp(registrationData);
     if (result.success) {
       setShowAuth(false);
-      setTab("hub");
+      // Route based on user type
+      switch (result.userType) {
+        case 'event_goer':
+          setTab("home");
+          break;
+        case 'organiser':
+          setTab("profile");
+          break;
+        case 'corporate':
+          setTab("home");
+          break;
+        default:
+          setTab("home");
+      }
     }
     return result;
   }, [signUp]);
@@ -868,7 +1662,7 @@ export default function App() {
   }, []);
 
   const handleTab = useCallback((t) => {
-    if (t === "hub" && !user) {
+    if (t === "profile" && !user) {
       setShowAuth(true);
       return;
     }
@@ -877,10 +1671,15 @@ export default function App() {
 
   const appUser = user ? {
     id: business?.id || user.id,
-    name: business?.business_name || business?.name || user.email?.split('@')[0],
+    name: business?.business_name || business?.name || user.user_metadata?.full_name || user.email?.split('@')[0],
+    firstName: (user.user_metadata?.full_name || user.email?.split('@')[0])?.split(' ')[0],
     email: user.email,
     count: business?.event_count || 0,
-    businessLoaded: !!business,
+    businessLoaded: !!business || user.user_metadata?.user_type !== 'organiser',
+    userType: user.user_metadata?.user_type || 'event_goer',
+    photoUrl: user.user_metadata?.avatar_url,
+    location: location?.name,
+    createdAt: user.created_at,
   } : null;
 
   // Location handlers
@@ -927,156 +1726,82 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div style={{
-        width: '100%', maxWidth: 430, margin: '0 auto',
-        minHeight: '100vh',
-        background: BG,
-        position: 'relative',
-        fontFamily: FONT,
-      }}>
-        {/* Notification Toast */}
-        {notification && (
-          <div style={{
+      <div
+        className="app-container"
+        style={{
+          width: '100%',
+          maxWidth: 430,
+          margin: '0 auto',
+          minHeight: '100dvh',
+          background: BG,
+          position: 'relative',
+          fontFamily: FONT,
+          overflowX: 'hidden',
+        }}
+      >
+        {/* Notification Toast with ARIA live region */}
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          style={{
             position: 'fixed',
             top: 16,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 300,
-            background: notification.type === 'error' ? '#EA4335' : '#34A853',
-            color: WHITE,
-            padding: '12px 20px',
-            borderRadius: 12,
-            fontSize: 14,
-            fontWeight: 600,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            animation: 'fadeInDown 0.3s ease',
-          }}>
-            {notification.message}
-          </div>
-        )}
-
-        {/* Main Content */}
-        <main id="main-content" style={{ paddingBottom: 80 }} role="main">
-          {/* Events Screen */}
-          {tab === "events" && (
-            <div style={{ padding: '16px' }}>
-              {/* Header */}
-              <div style={{ marginBottom: 20 }}>
-                <h1 style={{
-                  fontSize: 26, fontWeight: 800, color: BLACK,
-                  marginBottom: 4, letterSpacing: '-0.5px',
-                }}>
-                  Discover
-                </h1>
-                <p style={{ fontSize: 14, color: GRAY }}>
-                  Find local markets & events near you
-                </p>
-              </div>
-
-              {/* Search Bar */}
-              <SearchBar
-                value={searchQuery}
-                onChange={setSearchQuery}
-                onClear={() => setSearchQuery('')}
-              />
-
-              {/* Category Pills - Horizontal Scroll */}
-              <div style={{
-                display: 'flex', gap: 8,
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-                marginBottom: 16,
-                paddingBottom: 4,
-              }}>
-                <button
-                  onClick={() => setCat("all")}
-                  style={{
-                    padding: '8px 16px', borderRadius: 20,
-                    border: 'none',
-                    background: cat === "all" ? BLACK : WHITE,
-                    color: cat === "all" ? WHITE : GRAY,
-                    fontSize: 14, fontWeight: 600,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    boxShadow: cat === "all" ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
-                  }}
-                >
-                  All
-                </button>
-                {MAIN_CATEGORIES.slice(0, 4).map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => setCat(c.id)}
-                    style={{
-                      padding: '8px 16px', borderRadius: 20,
-                      border: 'none',
-                      background: cat === c.id ? c.color : WHITE,
-                      color: cat === c.id ? WHITE : GRAY,
-                      fontSize: 14, fontWeight: 600,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      boxShadow: cat === c.id ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
-                    }}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-
-              {/* Filter Bar */}
-              <div style={{
-                display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center', marginBottom: 16,
-              }}>
-                <span style={{ fontSize: 13, color: GRAY }}>
-                  {eventsLoading ? 'Loading...' : `${filteredEvents.length} events`}
-                </span>
-                <button
-                  onClick={() => setShowFilterModal(true)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '6px 12px', borderRadius: 8,
-                    background: WHITE, border: 'none',
-                    fontSize: 13, fontWeight: 600, color: BLACK,
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                  }}
-                  aria-label="Open filters"
-                >
-                  <Icon name="filter" size={14} />
-                  Filter
-                </button>
-              </div>
-
-              {/* Events List */}
-              {eventsLoading ? (
-                <SkeletonList count={3} />
-              ) : filteredEvents.length > 0 ? (
-                filteredEvents.map(ev => (
-                  <EventCard
-                    key={ev.id}
-                    event={ev}
-                    onClick={setSelectedEvent}
-                  />
-                ))
-              ) : (
-                <div style={{
-                  textAlign: 'center', padding: '60px 20px',
-                }}>
-                  <p style={{ fontSize: 16, fontWeight: 600, color: BLACK, marginBottom: 8 }}>
-                    {searchQuery ? 'No events found' : 'No events yet'}
-                  </p>
-                  <p style={{ fontSize: 14, color: GRAY }}>
-                    {searchQuery ? 'Try different search terms' : 'Check back soon!'}
-                  </p>
-                </div>
-              )}
+            pointerEvents: 'none',
+          }}
+        >
+          {notification && (
+            <div
+              style={{
+                background: notification.type === 'error' ? '#EA4335' : '#34A853',
+                color: WHITE,
+                padding: '12px 20px',
+                borderRadius: 12,
+                fontSize: 14,
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                animation: 'fadeInDown 0.3s ease',
+              }}
+            >
+              {notification.message}
             </div>
           )}
+        </div>
 
-          {/* Account Screen */}
-          {tab === "hub" && (
+        {/* Main Content */}
+        <main id="main-content" style={{ paddingBottom: 100 }} role="main">
+          {/* Home Screen */}
+          {tab === "home" && (
+            <HomeScreen
+              user={appUser}
+              location={location}
+              events={events}
+              eventsLoading={eventsLoading}
+              onEventClick={setSelectedEvent}
+              onSeeAllClick={() => setTab("events")}
+              onSetLocation={() => setShowLocationPicker(true)}
+            />
+          )}
+
+          {/* Search/Events Screen */}
+          {tab === "events" && (
+            <SearchScreen
+              events={events}
+              filteredEvents={filteredEvents}
+              eventsLoading={eventsLoading}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              cat={cat}
+              setCat={setCat}
+              onEventClick={setSelectedEvent}
+            />
+          )}
+
+          {/* Profile Screen */}
+          {tab === "profile" && (
             <AccountScreen
               user={appUser}
               events={events}
@@ -1085,53 +1810,98 @@ export default function App() {
               onEditProfile={() => setShowEditProfile(true)}
               onSignIn={() => setShowAuth(true)}
               onSignOut={handleSignOut}
-              onRefreshProfile={refreshBusiness}
+              onEditLocation={() => setShowLocationPicker(true)}
               loading={authLoading}
             />
           )}
 
-          {/* About Screen */}
-          {tab === "about" && <AboutScreen />}
         </main>
 
         {/* Bottom Navigation */}
         <BottomNav activeTab={tab} onTabChange={handleTab} />
 
-        {/* Event Detail Screen */}
+        {/* Location Picker Modal */}
+        <LocationPickerModal
+          isOpen={showLocationPicker}
+          onClose={() => setShowLocationPicker(false)}
+          currentLocation={location}
+          onUseCurrentLocation={async () => {
+            const pos = await requestLocation();
+            return pos;
+          }}
+          onSelectLocation={(lat, lng, name) => {
+            setManualLocation(lat, lng, name);
+          }}
+        />
+
+        {/* Event Detail Screen - Airbnb Style */}
         {selectedEvent && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            background: WHITE,
-            animation: 'slideInRight 0.3s ease',
-          }}>
-            <div style={{ height: '100%', overflowY: 'auto' }}>
-              {/* Back button */}
+          <div
+            className="event-detail"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 200,
+              background: WHITE,
+              animation: 'slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+              }}
+            >
+              {/* Back button - Airbnb circular style */}
               <button
                 onClick={() => setSelectedEvent(null)}
                 style={{
-                  position: 'fixed', top: 16, left: 16, zIndex: 10,
-                  width: 40, height: 40, borderRadius: '50%',
+                  position: 'fixed',
+                  top: 16,
+                  left: 16,
+                  zIndex: 10,
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
                   background: 'rgba(255,255,255,0.95)',
-                  border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: SHADOW_CARD,
+                  transition: 'transform 0.15s ease, box-shadow 0.25s ease',
                 }}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.92)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 aria-label="Go back"
               >
                 <Icon name="arrowLeft" size={20} />
               </button>
 
-              {/* Share button */}
+              {/* Share button - Airbnb circular style */}
               <button
                 onClick={() => handleShareEvent(selectedEvent)}
                 style={{
-                  position: 'fixed', top: 16, right: 16, zIndex: 10,
-                  width: 40, height: 40, borderRadius: '50%',
+                  position: 'fixed',
+                  top: 16,
+                  right: 16,
+                  zIndex: 10,
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
                   background: 'rgba(255,255,255,0.95)',
-                  border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: SHADOW_CARD,
+                  transition: 'transform 0.15s ease, box-shadow 0.25s ease',
                 }}
+                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.92)'}
+                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 aria-label="Share event"
               >
                 <Icon name="share" size={20} />
@@ -1147,47 +1917,85 @@ export default function App() {
               </div>
 
               {/* Event Content */}
-              <div style={{ padding: '20px 16px 100px' }}>
+              <div style={{ padding: '24px 20px 100px' }}>
+                {/* Category badge - Airbnb style pill */}
                 <div style={{
                   display: 'inline-block',
-                  padding: '4px 10px', borderRadius: 6,
+                  padding: '6px 12px',
+                  borderRadius: 9999,
                   background: `${getCategoryColor(selectedEvent.category)}15`,
                   color: getCategoryColor(selectedEvent.category),
-                  fontSize: 12, fontWeight: 600,
-                  marginBottom: 12,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  marginBottom: 16,
+                  letterSpacing: '0.2px',
                 }}>
                   {selectedEvent.category}
                 </div>
 
                 <h1 style={{
-                  fontSize: 24, fontWeight: 800, color: BLACK,
-                  marginBottom: 8, lineHeight: 1.2,
+                  fontSize: 26,
+                  fontWeight: 700,
+                  color: BLACK,
+                  marginBottom: 8,
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.5px',
                 }}>
                   {selectedEvent.title}
                 </h1>
 
-                <p style={{ fontSize: 14, color: GRAY, marginBottom: 24 }}>
+                <p style={{
+                  fontSize: 15,
+                  color: GRAY,
+                  marginBottom: 28,
+                  fontWeight: 400,
+                }}>
                   by {selectedEvent.organiser || 'Unknown organizer'}
                 </p>
 
-                {/* Event Details */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                {/* Event Details - Airbnb style metadata cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {/* When */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                     <div style={{
-                      width: 40, height: 40, borderRadius: 10,
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
                       background: GRAY_LIGHT,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
                     }}>
-                      <Icon name="calendar" size={18} />
+                      <Icon name="calendar" size={20} />
                     </div>
-                    <div>
-                      <p style={{ fontSize: 12, color: GRAY, marginBottom: 2 }}>When</p>
-                      <p style={{ fontSize: 15, fontWeight: 600, color: BLACK }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{
+                        fontSize: 12,
+                        color: GRAY,
+                        marginBottom: 4,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        fontWeight: 500,
+                      }}>
+                        When
+                      </p>
+                      <p style={{
+                        fontSize: 16,
+                        fontWeight: 600,
+                        color: BLACK,
+                        marginBottom: 2,
+                        letterSpacing: '-0.2px',
+                      }}>
                         {new Date(selectedEvent.start).toLocaleDateString('en-ZA', {
                           weekday: 'long', day: 'numeric', month: 'long'
                         })}
                       </p>
-                      <p style={{ fontSize: 14, color: GRAY }}>
+                      <p style={{
+                        fontSize: 14,
+                        color: GRAY,
+                        letterSpacing: '0.1px',
+                      }}>
                         {new Date(selectedEvent.start).toLocaleTimeString('en-ZA', {
                           hour: '2-digit', minute: '2-digit'
                         })} – {new Date(selectedEvent.end).toLocaleTimeString('en-ZA', {
@@ -1197,20 +2005,45 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  {/* Where */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                     <div style={{
-                      width: 40, height: 40, borderRadius: 10,
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
                       background: GRAY_LIGHT,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
                     }}>
-                      <Icon name="location" size={18} />
+                      <Icon name="location" size={20} />
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 12, color: GRAY, marginBottom: 2 }}>Where</p>
-                      <p style={{ fontSize: 15, fontWeight: 600, color: BLACK }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{
+                        fontSize: 12,
+                        color: GRAY,
+                        marginBottom: 4,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        fontWeight: 500,
+                      }}>
+                        Where
+                      </p>
+                      <p style={{
+                        fontSize: 16,
+                        fontWeight: 600,
+                        color: BLACK,
+                        marginBottom: 2,
+                        letterSpacing: '-0.2px',
+                      }}>
                         {selectedEvent.location}
                       </p>
-                      <p style={{ fontSize: 14, color: GRAY }}>
+                      <p style={{
+                        fontSize: 14,
+                        color: GRAY,
+                        letterSpacing: '0.1px',
+                      }}>
                         {selectedEvent.address}
                       </p>
                       {selectedEvent.latitude && (
@@ -1221,15 +2054,16 @@ export default function App() {
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 4,
-                            marginTop: 8,
+                            gap: 6,
+                            marginTop: 10,
                             fontSize: 14,
                             color: ACCENT,
                             textDecoration: 'none',
-                            fontWeight: 500,
+                            fontWeight: 600,
+                            padding: '6px 0',
                           }}
                         >
-                          <Icon name="map" size={14} color={ACCENT} />
+                          <Icon name="map" size={16} color={ACCENT} />
                           Open in Maps
                         </a>
                       )}
@@ -1237,99 +2071,78 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Contact Buttons */}
+                {/* Contact Buttons - Airbnb style pill buttons */}
                 {(selectedEvent.phone || selectedEvent.whatsapp || selectedEvent.website || selectedEvent.instagram) && (
-                  <div style={{ marginTop: 24 }}>
-                    <h2 style={{ fontSize: 13, fontWeight: 600, color: GRAY, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div style={{ marginTop: 32 }}>
+                    <h2 style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: GRAY,
+                      marginBottom: 14,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.8px',
+                    }}>
                       Contact
                     </h2>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                       {selectedEvent.phone && (
-                        <a
+                        <ContactButton
                           href={`tel:${selectedEvent.phone}`}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '10px 16px',
-                            background: GRAY_LIGHT,
-                            borderRadius: 20,
-                            fontSize: 14,
-                            color: BLACK,
-                            textDecoration: 'none',
-                            fontWeight: 500,
-                          }}
-                        >
-                          <Icon name="phone" size={16} />
-                          Call
-                        </a>
+                          icon="phone"
+                          label="Call"
+                          variant="default"
+                        />
                       )}
                       {selectedEvent.whatsapp && (
-                        <a
+                        <ContactButton
                           href={`https://wa.me/${selectedEvent.whatsapp.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '10px 16px',
-                            background: '#25D366',
-                            borderRadius: 20,
-                            fontSize: 14,
-                            color: WHITE,
-                            textDecoration: 'none',
-                            fontWeight: 500,
-                          }}
-                        >
-                          WhatsApp
-                        </a>
+                          icon="phone"
+                          label="WhatsApp"
+                          variant="whatsapp"
+                          external
+                        />
                       )}
                       {selectedEvent.website && (
-                        <a
+                        <ContactButton
                           href={selectedEvent.website.startsWith('http') ? selectedEvent.website : `https://${selectedEvent.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '10px 16px',
-                            background: BLACK,
-                            borderRadius: 20,
-                            fontSize: 14,
-                            color: WHITE,
-                            textDecoration: 'none',
-                            fontWeight: 500,
-                          }}
-                        >
-                          <Icon name="external" size={14} color={WHITE} />
-                          Website
-                        </a>
+                          icon="external"
+                          label="Website"
+                          variant="dark"
+                          external
+                        />
                       )}
                       {selectedEvent.instagram && (
-                        <a
+                        <ContactButton
                           href={`https://instagram.com/${selectedEvent.instagram.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '10px 16px',
-                            background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)',
-                            borderRadius: 20,
-                            fontSize: 14,
-                            color: WHITE,
-                            textDecoration: 'none',
-                            fontWeight: 500,
-                          }}
-                        >
-                          Instagram
-                        </a>
+                          icon="external"
+                          label="Instagram"
+                          variant="instagram"
+                          external
+                        />
                       )}
                     </div>
                   </div>
                 )}
 
                 {/* Description */}
-                <div style={{ marginTop: 24 }}>
-                  <h2 style={{ fontSize: 17, fontWeight: 700, color: BLACK, marginBottom: 8 }}>
+                <div style={{ marginTop: 32 }}>
+                  <h2 style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: GRAY,
+                    marginBottom: 14,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.8px',
+                  }}>
                     About this event
                   </h2>
-                  <p style={{ fontSize: 15, color: GRAY, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                  <p style={{
+                    fontSize: 16,
+                    color: BLACK,
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-wrap',
+                    letterSpacing: '0.1px',
+                  }}>
                     {selectedEvent.desc || 'No description available.'}
                   </p>
                 </div>

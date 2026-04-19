@@ -49,11 +49,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
 
-    <!-- Viewport for fullscreen PWA -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <!-- Viewport for fullscreen PWA with address bar hide on scroll -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
 
     <!-- Theme colors -->
-    <meta name="theme-color" content="#F7F3EE" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#F8F9FA" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#1A1A1A" media="(prefers-color-scheme: dark)" />
 
     <!-- App description -->
@@ -98,31 +98,32 @@
         -webkit-tap-highlight-color: transparent;
       }
 
-      /* Full viewport height accounting for mobile browser chrome */
+      /* Full viewport height accounting for mobile browser chrome
+         Using min-height allows content to grow and trigger address bar hiding */
       html {
-        height: 100%;
-        height: 100dvh;
-        overflow: hidden;
-        overscroll-behavior: none;
+        min-height: 100%;
+        min-height: 100dvh;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior-y: none;
+        -webkit-overflow-scrolling: touch;
       }
 
       body {
         margin: 0;
         padding: 0;
-        height: 100%;
-        height: 100dvh;
-        overflow: hidden;
-        overscroll-behavior: none;
+        min-height: 100%;
+        min-height: 100dvh;
+        overflow-x: hidden;
         touch-action: manipulation;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
 
       #root {
-        height: 100%;
-        height: 100dvh;
-        overflow: hidden;
-        overscroll-behavior: none;
+        min-height: 100%;
+        min-height: 100dvh;
+        overflow-x: hidden;
       }
 
       /* Prevent zoom on input focus iOS */

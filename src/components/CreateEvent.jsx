@@ -7,9 +7,9 @@ import {
   revokePreviewUrl,
   getFileInfo,
 } from "../api/storage";
-import "../styles/modern-design.css";
+import "../styles/airbnb-inspired.css";
 
-// Modern Design Tokens
+// Airbnb-Inspired Design Tokens
 const BG = "#F8F9FA";
 const WHITE = "#FFFFFF";
 const BLACK = "#1A1A1A";
@@ -18,11 +18,15 @@ const GRAY_LIGHT = "#F1F3F4";
 const GRAY_MEDIUM = "#80868B";
 const ACCENT = "#E85D3F";
 const ACCENT_LIGHT = "#FFF5F2";
-const FONT =
-  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+// Airbnb Three-Layer Shadow System
+const SHADOW_CARD = "0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.1)";
+const SHADOW_CARD_HOVER = "0 0 0 1px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.12)";
+const SHADOW_MODAL = "0 0 0 1px rgba(0,0,0,0.02), 0 8px 24px rgba(0,0,0,0.12)";
 
 /**
- * CreateEvent - Modern event creation form with bulletproof mobile inputs
+ * CreateEvent - Airbnb-inspired event creation form
  */
 
 // Stable Input - Never re-renders
@@ -110,6 +114,42 @@ const StableTextarea = memo(
 );
 
 StableTextarea.displayName = "StableTextarea";
+
+// Airbnb-Style Category Button
+const CategoryButton = memo(({ label, isActive, color, onClick }) => {
+  const [isPressed, setIsPressed] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      onMouseLeave={() => setIsPressed(false)}
+      onTouchStart={() => setIsPressed(true)}
+      onTouchEnd={() => setIsPressed(false)}
+      style={{
+        border: "none",
+        background: isActive ? color : WHITE,
+        color: isActive ? WHITE : BLACK,
+        borderRadius: 9999, // Full pill
+        padding: "12px 20px",
+        fontSize: 14,
+        fontWeight: isActive ? 600 : 500,
+        cursor: "pointer",
+        fontFamily: FONT,
+        transform: isPressed ? "scale(0.95)" : "scale(1)",
+        transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
+        boxShadow: isActive
+          ? "0 4px 12px rgba(0,0,0,0.15)"
+          : SHADOW_CARD,
+      }}
+    >
+      {label}
+    </button>
+  );
+});
+
+CategoryButton.displayName = "CategoryButton";
 
 // Stable DateTime Input - Never re-renders
 const StableDateTimeInput = memo(
@@ -783,27 +823,42 @@ const CreateEvent = ({ user, onSave, onBack }) => {
 
   return (
     <div
+      className="create-event-modal"
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 150,
         background: BG,
         overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        animation: "slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
-      <div style={{ padding: "16px 16px 100px" }}>
-        {/* Header */}
+      <style>{`
+        @keyframes slideUp {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+      <div style={{ padding: "20px 20px 100px" }}>
+        {/* Header - Airbnb style sticky */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 12,
-            marginBottom: 24,
+            marginBottom: 28,
             position: "sticky",
             top: 0,
             background: BG,
-            paddingTop: 8,
-            paddingBottom: 8,
+            paddingTop: 12,
+            paddingBottom: 12,
             zIndex: 10,
           }}
         >
@@ -813,19 +868,26 @@ const CreateEvent = ({ user, onSave, onBack }) => {
               background: WHITE,
               border: "none",
               borderRadius: 12,
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-              transition: "transform 0.15s ease",
+              boxShadow: SHADOW_CARD,
+              transition: "transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease",
             }}
             onMouseDown={(e) =>
-              (e.currentTarget.style.transform = "scale(0.95)")
+              (e.currentTarget.style.transform = "scale(0.92)")
             }
-            onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = SHADOW_CARD_HOVER;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = SHADOW_CARD;
+            }}
           >
             <Icon name="back" size={20} />
           </button>
@@ -893,28 +955,13 @@ const CreateEvent = ({ user, onSave, onBack }) => {
           }}
         >
           {TOP_LEVEL_CATEGORIES.filter((c) => c.id !== "all").map((c) => (
-            <button
+            <CategoryButton
               key={c.id}
+              label={c.name}
+              isActive={cat === c.id}
+              color={c.color}
               onClick={() => handleCatChange(c.id)}
-              style={{
-                border: "none",
-                background: cat === c.id ? c.color : WHITE,
-                color: cat === c.id ? WHITE : BLACK,
-                borderRadius: 20,
-                padding: "10px 18px",
-                fontSize: 14,
-                fontWeight: cat === c.id ? 600 : 500,
-                cursor: "pointer",
-                fontFamily: FONT,
-                boxShadow:
-                  cat === c.id
-                    ? "0 2px 8px rgba(0,0,0,0.15)"
-                    : "0 1px 3px rgba(0,0,0,0.08)",
-                transition: "all 0.15s ease",
-              }}
-            >
-              {c.name}
-            </button>
+            />
           ))}
         </div>
 
@@ -922,20 +969,22 @@ const CreateEvent = ({ user, onSave, onBack }) => {
         {showSubCats && (
           <div
             style={{
-              marginBottom: 20,
-              padding: 16,
+              marginBottom: 24,
+              padding: 20,
               background: WHITE,
-              borderRadius: 14,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+              borderRadius: 16,
+              boxShadow: SHADOW_CARD,
             }}
           >
             <p
               style={{
                 fontFamily: FONT,
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 600,
                 color: GRAY,
-                marginBottom: 12,
+                marginBottom: 14,
+                textTransform: 'uppercase',
+                letterSpacing: '0.8px',
               }}
             >
               Select a more specific category
@@ -1135,15 +1184,28 @@ const CreateEvent = ({ user, onSave, onBack }) => {
               flex: 1,
               background: WHITE,
               color: BLACK,
-              border: `1.5px solid ${GRAY_LIGHT}`,
-              borderRadius: 24,
-              padding: "14px",
+              border: 'none',
+              borderRadius: 12,
+              padding: "14px 20px",
               fontSize: 15,
               fontWeight: 600,
               cursor: isSubmitting || isUploading ? "not-allowed" : "pointer",
               fontFamily: FONT,
               opacity: isSubmitting || isUploading ? 0.7 : 1,
-              transition: "all 0.15s ease",
+              transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
+              boxShadow: SHADOW_CARD,
+            }}
+            onMouseDown={(e) =>
+              !(isSubmitting || isUploading) &&
+              (e.currentTarget.style.transform = "scale(0.96)")
+            }
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = SHADOW_CARD_HOVER;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = SHADOW_CARD;
             }}
           >
             {isUploading ? "Uploading…" : "Save draft"}
@@ -1156,21 +1218,28 @@ const CreateEvent = ({ user, onSave, onBack }) => {
               background: BLACK,
               color: WHITE,
               border: "none",
-              borderRadius: 24,
-              padding: "14px",
+              borderRadius: 12,
+              padding: "14px 20px",
               fontSize: 15,
               fontWeight: 600,
               cursor: isSubmitting || isUploading ? "not-allowed" : "pointer",
               fontFamily: FONT,
               opacity: isSubmitting || isUploading ? 0.7 : 1,
-              transition: "transform 0.15s ease",
+              transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
             }}
             onMouseDown={(e) =>
               !(isSubmitting || isUploading) &&
-              (e.currentTarget.style.transform = "scale(0.98)")
+              (e.currentTarget.style.transform = "scale(0.96)")
             }
-            onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+            }}
           >
             {isUploading
               ? `Uploading ${uploadProgress}%…`

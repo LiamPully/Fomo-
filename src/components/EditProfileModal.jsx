@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
 import "../styles/modern-design.css";
 
-// Modern Design Tokens
+// Airbnb Design Tokens
 const BG = "#F8F9FA";
 const WHITE = "#FFFFFF";
 const BLACK = "#1A1A1A";
@@ -11,105 +11,123 @@ const GRAY_LIGHT = "#F1F3F4";
 const GRAY_MEDIUM = "#80868B";
 const ACCENT = "#E85D3F";
 const ACCENT_LIGHT = "#FFF5F2";
-const FONT =
-  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-/**
- * EditProfileModal - Modern profile editing modal
- */
-
+// Optimistic update - closes immediately, syncs in background
 const EditProfileModal = ({ open, onClose, user, onProfileUpdated }) => {
-  const [businessName, setBusinessName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [bio, setBio] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
   const inputRef = useRef(null);
+  const isMounted = useRef(true);
 
+  // Load user data when modal opens
   useEffect(() => {
+    isMounted.current = true;
     if (open && user) {
-      setBusinessName(user.name || "");
+      setFullName(user.name || "");
+      setBio(user.bio || "");
+      setPhone(user.phone || "");
       setError(null);
-      setSuccess(false);
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
+    return () => { isMounted.current = false; };
   }, [open, user]);
 
-  const validateBusinessName = (name) => {
-    if (!name || name.trim().length < 2) {
-      return "Business name must be at least 2 characters";
+  const validate = () => {
+    if (!fullName || fullName.trim().length < 2) {
+      return "Name must be at least 2 characters";
     }
-    if (name.length > 100) {
-      return "Business name must be less than 100 characters";
+    if (fullName.length > 100) {
+      return "Name must be less than 100 characters";
     }
     return null;
   };
 
-  const handleSubmit = useCallback(
-    async (e) => {
-      e.preventDefault();
-      setError(null);
-      setSuccess(false);
+  // Optimistic save - update UI immediately, sync in background
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    setError(null);
 
-      const validationError = validateBusinessName(businessName);
-      if (validationError) {
-        setError(validationError);
-        return;
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    if (!user?.id) {
+      setError("User not found");
+      return;
+    }
+
+    const trimmedName = fullName.trim();
+    const updates = {
+      name: trimmedName,
+      bio: bio.trim(),
+      phone: phone.trim(),
+    };
+
+    // OPTIMISTIC UPDATE: Close modal and update UI immediately
+    onClose();
+    onProfileUpdated?.(updates);
+    setSaving(true);
+
+    // Background sync
+    try {
+      const promises = [];
+
+      // Update user metadata (fast)
+      promises.push(
+        supabase.auth.updateUser({
+          data: { full_name: trimmedName },
+        }).catch(console.error)
+      );
+
+      // Update businesses table if user is an organiser
+      if (user.userType === 'organiser') {
+        promises.push(
+          supabase
+            .from("businesses")
+            .update({
+              business_name: trimmedName,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("user_id", user.id)
+            .then(() => console.log("[EditProfile] Business updated"))
+            .catch(err => console.error("[EditProfile] Business update failed:", err))
+        );
       }
 
-      if (!user?.id) {
-        setError("User not found");
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const { data, error: updateError } = await supabase
-          .from("businesses")
-          .update({
-            business_name: businessName.trim(),
+      // Update profiles table (universal)
+      promises.push(
+        supabase
+          .from("profiles")
+          .upsert({
+            id: user.id,
+            full_name: trimmedName,
+            bio: bio.trim(),
+            phone: phone.trim(),
             updated_at: new Date().toISOString(),
           })
-          .eq("user_id", user.id)
-          .select()
-          .single();
+          .then(() => console.log("[EditProfile] Profile updated"))
+          .catch(err => console.error("[EditProfile] Profile update failed:", err))
+      );
 
-        if (updateError) {
-          console.error("Failed to update business:", updateError);
-          setError("Failed to update profile. Please try again.");
-          return;
-        }
+      await Promise.all(promises);
 
-        const { error: metadataError } = await supabase.auth.updateUser({
-          data: { business_name: businessName.trim() },
-        });
-
-        if (metadataError) {
-          console.error("Failed to update user metadata:", metadataError);
-        }
-
-        setSuccess(true);
-        onProfileUpdated?.(data);
-
-        setTimeout(() => {
-          onClose();
-        }, 800);
-      } catch (err) {
-        console.error("Exception updating profile:", err);
-        setError("An unexpected error occurred. Please try again.");
-      } finally {
-        setLoading(false);
+      if (isMounted.current) {
+        setSaving(false);
       }
-    },
-    [businessName, user, onClose, onProfileUpdated],
-  );
-
-  const handleClose = useCallback(() => {
-    setError(null);
-    setSuccess(false);
-    onClose();
-  }, [onClose]);
+    } catch (err) {
+      console.error("[EditProfile] Update error:", err);
+      if (isMounted.current) {
+        setSaving(false);
+      }
+    }
+  }, [fullName, bio, phone, user, onClose, onProfileUpdated]);
 
   if (!open) return null;
 
@@ -118,220 +136,197 @@ const EditProfileModal = ({ open, onClose, user, onProfileUpdated }) => {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 200,
-        background: "rgba(0,0,0,0.4)",
+        zIndex: 300,
+        background: "rgba(0,0,0,0.5)",
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-end",
         animation: "fadeIn 0.2s ease",
       }}
-      onClick={(e) => e.target === e.currentTarget && handleClose()}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         style={{
           background: WHITE,
           borderRadius: "20px 20px 0 0",
           padding: "24px 20px 40px",
-          animation: "slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
-          maxHeight: "80vh",
+          maxHeight: "90vh",
           overflowY: "auto",
+          animation: "slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
       >
         {/* Handle bar */}
-        <div
-          style={{
-            width: 36,
-            height: 4,
-            borderRadius: 2,
-            background: GRAY_LIGHT,
-            margin: "0 auto 20px",
-          }}
-        />
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: GRAY_LIGHT, margin: "0 auto 20px" }} />
 
-        <h2
-          style={{
-            fontFamily: FONT,
-            fontSize: 24,
-            fontWeight: 700,
-            color: BLACK,
-            marginBottom: 6,
-          }}
-        >
-          Edit Profile
-        </h2>
-        <p
-          style={{
-            fontFamily: FONT,
-            fontSize: 15,
-            color: GRAY,
-            marginBottom: 24,
-          }}
-        >
-          Update your business name and profile information.
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <h2 style={{ fontFamily: FONT, fontSize: 22, fontWeight: 700, color: BLACK }}>
+            Edit Profile
+          </h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 8 }}>
+            <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={GRAY} strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <p style={{ fontFamily: FONT, fontSize: 14, color: GRAY, marginBottom: 24 }}>
+          Update your profile information
         </p>
 
         {error && (
-          <div
-            style={{
-              background: "#FEE2E2",
-              borderRadius: 12,
-              padding: "12px 16px",
-              marginBottom: 16,
-            }}
-          >
-            <p
-              style={{
-                fontFamily: FONT,
-                fontSize: 14,
-                color: "#EA4335",
-                margin: 0,
-              }}
-            >
-              {error}
-            </p>
-          </div>
-        )}
-
-        {success && (
-          <div
-            style={{
-              background: "#E8F5E9",
-              borderRadius: 12,
-              padding: "12px 16px",
-              marginBottom: 16,
-            }}
-          >
-            <p
-              style={{
-                fontFamily: FONT,
-                fontSize: 14,
-                color: "#34A853",
-                margin: 0,
-              }}
-            >
-              Profile updated successfully!
-            </p>
+          <div style={{ background: "#FEE2E2", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+            <p style={{ fontFamily: FONT, fontSize: 14, color: "#EA4335", margin: 0 }}>{error}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <label
-            style={{
-              display: "block",
-              fontFamily: FONT,
-              fontSize: 13,
-              fontWeight: 600,
-              color: GRAY,
-              marginBottom: 8,
-            }}
-          >
-            Business Name
-          </label>
-          <input
-            ref={inputRef}
-            type="text"
-            value={businessName}
-            onChange={(e) => setBusinessName(e.target.value)}
-            placeholder="Enter your business name"
-            disabled={loading}
-            style={{
-              width: "100%",
-              border: `1.5px solid ${error ? ACCENT : GRAY_LIGHT}`,
-              borderRadius: 12,
-              padding: "14px 16px",
-              fontSize: 15,
-              marginBottom: 20,
-              outline: "none",
-              background: WHITE,
-              fontFamily: FONT,
-              boxSizing: "border-box",
-              WebkitAppearance: "none",
-              opacity: loading ? 0.7 : 1,
-              transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = ACCENT;
-              e.target.style.boxShadow = `0 0 0 3px ${ACCENT_LIGHT}`;
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = error ? ACCENT : GRAY_LIGHT;
-              e.target.style.boxShadow = "none";
-            }}
-          />
+          {/* Full Name */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: GRAY, marginBottom: 6 }}>
+              Full Name
+            </label>
+            <input
+              ref={inputRef}
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{
+                width: "100%",
+                border: `1.5px solid ${error ? ACCENT : GRAY_LIGHT}`,
+                borderRadius: 12,
+                padding: "14px 16px",
+                fontSize: 15,
+                fontFamily: FONT,
+                boxSizing: "border-box",
+                outline: "none",
+                transition: "border-color 0.15s ease",
+              }}
+              onFocus={(e) => { e.target.style.borderColor = ACCENT; }}
+              onBlur={(e) => { e.target.style.borderColor = error ? ACCENT : GRAY_LIGHT; }}
+            />
+          </div>
 
+          {/* Bio */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: GRAY, marginBottom: 6 }}>
+              Bio (optional)
+            </label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Tell us about yourself"
+              rows={3}
+              style={{
+                width: "100%",
+                border: `1.5px solid ${GRAY_LIGHT}`,
+                borderRadius: 12,
+                padding: "14px 16px",
+                fontSize: 15,
+                fontFamily: FONT,
+                boxSizing: "border-box",
+                outline: "none",
+                resize: "none",
+                transition: "border-color 0.15s ease",
+              }}
+              onFocus={(e) => { e.target.style.borderColor = ACCENT; }}
+              onBlur={(e) => { e.target.style.borderColor = GRAY_LIGHT; }}
+            />
+          </div>
+
+          {/* Phone */}
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: GRAY, marginBottom: 6 }}>
+              Phone (optional)
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Enter your phone number"
+              style={{
+                width: "100%",
+                border: `1.5px solid ${GRAY_LIGHT}`,
+                borderRadius: 12,
+                padding: "14px 16px",
+                fontSize: 15,
+                fontFamily: FONT,
+                boxSizing: "border-box",
+                outline: "none",
+                transition: "border-color 0.15s ease",
+              }}
+              onFocus={(e) => { e.target.style.borderColor = ACCENT; }}
+              onBlur={(e) => { e.target.style.borderColor = GRAY_LIGHT; }}
+            />
+          </div>
+
+          {/* Action Buttons */}
           <div style={{ display: "flex", gap: 12 }}>
             <button
               type="button"
-              onClick={handleClose}
-              disabled={loading}
+              onClick={onClose}
               style={{
                 flex: 1,
-                background: GRAY_LIGHT,
+                padding: "15px",
+                borderRadius: 12,
+                border: `1.5px solid ${GRAY_LIGHT}`,
+                background: WHITE,
                 color: BLACK,
-                border: "none",
-                borderRadius: 24,
-                padding: "14px",
                 fontSize: 15,
                 fontWeight: 600,
-                cursor: loading ? "not-allowed" : "pointer",
+                cursor: "pointer",
                 fontFamily: FONT,
-                opacity: loading ? 0.7 : 1,
-                transition: "transform 0.15s ease",
               }}
-              onMouseDown={(e) =>
-                !loading && (e.currentTarget.style.transform = "scale(0.98)")
-              }
-              onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.transform = "scale(1)")
-              }
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading || success}
               style={{
                 flex: 1,
+                padding: "15px",
+                borderRadius: 12,
+                border: "none",
                 background: BLACK,
                 color: WHITE,
-                border: "none",
-                borderRadius: 24,
-                padding: "14px",
                 fontSize: 15,
                 fontWeight: 600,
-                cursor: loading || success ? "not-allowed" : "pointer",
+                cursor: "pointer",
                 fontFamily: FONT,
-                opacity: loading || success ? 0.7 : 1,
-                transition: "transform 0.15s ease",
               }}
-              onMouseDown={(e) =>
-                !(loading || success) &&
-                (e.currentTarget.style.transform = "scale(0.98)")
-              }
-              onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.transform = "scale(1)")
-              }
             >
-              {loading ? "Saving…" : success ? "Saved!" : "Save Changes"}
+              Save Changes
             </button>
           </div>
         </form>
       </div>
 
+      {/* Background save indicator */}
+      {saving && (
+        <div style={{
+          position: "fixed",
+          bottom: 20,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(0,0,0,0.8)",
+          color: WHITE,
+          padding: "10px 20px",
+          borderRadius: 20,
+          fontSize: 13,
+          fontFamily: FONT,
+          zIndex: 400,
+        }}>
+          Syncing...
+        </div>
+      )}
+
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
       `}</style>
     </div>
   );
 };
 
-export default EditProfileModal;
+export default memo(EditProfileModal);

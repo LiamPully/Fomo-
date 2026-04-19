@@ -170,38 +170,47 @@ export function useAuth() {
     }
   }, []);
 
-  // Sign up with email/password
-  const signUp = useCallback(async (email, password, businessName) => {
+  // Sign up with email/password - new multi-type registration
+  const signUp = useCallback(async (registrationData) => {
+    const {
+      email,
+      password,
+      fullName,
+      userType,
+      // Organiser fields
+      businessName,
+      businessType,
+      businessLocation,
+      website,
+      // Corporate fields
+      companyName,
+      industry,
+      companySize,
+    } = registrationData;
+
     setError(null);
 
-    // Validate inputs
-    if (!validateEmail(email)) {
-      const errorMsg = 'Please enter a valid email address';
-      setError(errorMsg);
-      return { success: false, error: errorMsg };
-    }
-
-    const passwordErrors = validatePassword(password);
-    if (passwordErrors.length > 0) {
-      const errorMsg = passwordErrors.join('. ');
-      setError(errorMsg);
-      return { success: false, error: errorMsg };
-    }
-
-    const businessNameError = validateBusinessName(businessName);
-    if (businessNameError) {
-      setError(businessNameError);
-      return { success: false, error: businessNameError };
-    }
-
     try {
-      // Create auth user with business name in metadata for trigger
+      // Create auth user with extended metadata
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            business_name: businessName.trim(),
+            full_name: fullName,
+            user_type: userType,
+            // Include all fields for the trigger or profile creation
+            ...(userType === 'organiser' && {
+              business_name: businessName,
+              business_type: businessType,
+              business_location: businessLocation,
+              website: website,
+            }),
+            ...(userType === 'corporate' && {
+              company_name: companyName,
+              industry: industry,
+              company_size: companySize,
+            }),
           },
         },
       });
@@ -209,17 +218,23 @@ export function useAuth() {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Try to fetch business record (may be created by trigger)
-        let businessData = await fetchBusiness(authData.user.id);
+        // For organisers, fetch/create business record
+        let businessData = null;
+        if (userType === 'organiser') {
+          businessData = await fetchBusiness(authData.user.id);
 
-        // If trigger failed or is slow, create manually
-        if (!businessData) {
-          businessData = await createBusinessProfile(authData.user.id, businessName);
+          if (!businessData && businessName) {
+            businessData = await createBusinessProfile(authData.user.id, businessName);
+          }
         }
 
-        setUser(authData.user);
+        // Store user type in session for routing decisions
+        setUser({
+          ...authData.user,
+          user_type: userType,
+        });
         setBusiness(businessData);
-        return { success: true, error: null };
+        return { success: true, error: null, userType };
       }
     } catch (err) {
       const sanitized = sanitizeError(err);

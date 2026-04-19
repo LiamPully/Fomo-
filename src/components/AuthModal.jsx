@@ -13,40 +13,188 @@ const ACCENT_LIGHT = "#FFF5F2";
 const FONT =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
+// User Types Configuration
+const USER_TYPES = [
+  {
+    id: "event_goer",
+    emoji: "🎉",
+    title: "Event Goer",
+    description: "Discover and attend local events",
+  },
+  {
+    id: "organiser",
+    emoji: "🏢",
+    title: "Business / Organiser",
+    description: "Host and manage events",
+  },
+  {
+    id: "corporate",
+    emoji: "🤝",
+    title: "Corporate",
+    description: "Buy tickets for your team",
+  },
+];
+
+// Business Types
+const BUSINESS_TYPES = [
+  { value: "", label: "Select business type" },
+  { value: "venue", label: "Venue / Event Space" },
+  { value: "promoter", label: "Event Promoter" },
+  { value: "artist", label: "Artist / Performer" },
+  { value: "food", label: "Food & Beverage" },
+  { value: "retail", label: "Retail / Market" },
+  { value: "nonprofit", label: "Non-Profit / Community" },
+  { value: "other", label: "Other" },
+];
+
+// Industries
+const INDUSTRIES = [
+  { value: "", label: "Select industry" },
+  { value: "tech", label: "Technology" },
+  { value: "finance", label: "Finance / Banking" },
+  { value: "healthcare", label: "Healthcare" },
+  { value: "education", label: "Education" },
+  { value: "retail", label: "Retail" },
+  { value: "manufacturing", label: "Manufacturing" },
+  { value: "consulting", label: "Consulting" },
+  { value: "media", label: "Media / Entertainment" },
+  { value: "hospitality", label: "Hospitality" },
+  { value: "other", label: "Other" },
+];
+
+// Company Sizes
+const COMPANY_SIZES = [
+  { value: "", label: "Select size" },
+  { value: "1-10", label: "1-10 employees" },
+  { value: "11-50", label: "11-50 employees" },
+  { value: "51-200", label: "51-200 employees" },
+  { value: "200+", label: "200+ employees" },
+];
+
 /**
- * AuthModal - Modern authentication modal with mobile-safe inputs
+ * AuthModal - Multi-step authentication with user type selection
  *
- * Uses completely uncontrolled inputs to prevent mobile keyboard issues.
- * Values are captured via refs, not React state.
+ * Step 1: Choose user type
+ * Step 2: Enter details (fields vary by type)
  */
 
-// Stable Input Component - Never re-renders after mount
-const StableAuthInput = memo(
-  ({ inputRef, type = "text", placeholder, hasError, autoFocus = false }) => {
+// Input Component with error handling
+const FormInput = memo(
+  ({
+    inputRef,
+    type = "text",
+    placeholder,
+    hasError,
+    errorMessage,
+    autoFocus = false,
+    onBlur,
+  }) => {
+    const [showPassword, setShowPassword] = useState(false);
+    const isPassword = type === "password";
+    const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+
     return (
-      <input
-        ref={inputRef}
-        type={type}
-        placeholder={placeholder}
-        autoComplete={type === "password" ? "current-password" : "email"}
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck="false"
-        autoFocus={autoFocus}
+      <div style={{ marginBottom: hasError ? 8 : 16 }}>
+        <div style={{ position: "relative" }}>
+          <input
+            ref={inputRef}
+            type={inputType}
+            placeholder={placeholder}
+            autoComplete={isPassword ? "new-password" : "email"}
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
+            autoFocus={autoFocus}
+            style={{
+              width: "100%",
+              border: `1.5px solid ${hasError ? ACCENT : GRAY_LIGHT}`,
+              borderRadius: 12,
+              padding: "14px 16px",
+              fontSize: 15,
+              outline: "none",
+              background: WHITE,
+              fontFamily: FONT,
+              boxSizing: "border-box",
+              WebkitAppearance: "none",
+              touchAction: "manipulation",
+              transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+              paddingRight: isPassword ? 50 : 16,
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = ACCENT;
+              e.target.style.boxShadow = `0 0 0 3px ${ACCENT_LIGHT}`;
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = hasError ? ACCENT : GRAY_LIGHT;
+              e.target.style.boxShadow = "none";
+              if (onBlur) onBlur(e);
+            }}
+          />
+          {isPassword && (
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: "absolute",
+                right: 12,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 4,
+                color: GRAY,
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          )}
+        </div>
+        {hasError && errorMessage && (
+          <p
+            style={{
+              fontSize: 12,
+              color: ACCENT,
+              margin: "4px 0 0 0",
+              fontFamily: FONT,
+            }}
+          >
+            {errorMessage}
+          </p>
+        )}
+      </div>
+    );
+  },
+);
+
+FormInput.displayName = "FormInput";
+
+// Select/Dropdown Component
+const FormSelect = memo(({ selectRef, options, hasError, errorMessage }) => {
+  return (
+    <div style={{ marginBottom: hasError ? 8 : 16 }}>
+      <select
+        ref={selectRef}
         style={{
           width: "100%",
           border: `1.5px solid ${hasError ? ACCENT : GRAY_LIGHT}`,
           borderRadius: 12,
           padding: "14px 16px",
           fontSize: 15,
-          marginBottom: 12,
           outline: "none",
           background: WHITE,
           fontFamily: FONT,
           boxSizing: "border-box",
           WebkitAppearance: "none",
-          touchAction: "manipulation",
-          transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+          MozAppearance: "none",
+          appearance: "none",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235F6368' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 16px center",
+          paddingRight: 40,
+          cursor: "pointer",
         }}
         onFocus={(e) => {
           e.target.style.borderColor = ACCENT;
@@ -56,13 +204,114 @@ const StableAuthInput = memo(
           e.target.style.borderColor = hasError ? ACCENT : GRAY_LIGHT;
           e.target.style.boxShadow = "none";
         }}
-      />
-    );
-  },
-  () => true,
-);
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      {hasError && errorMessage && (
+        <p
+          style={{
+            fontSize: 12,
+            color: ACCENT,
+            margin: "4px 0 0 0",
+            fontFamily: FONT,
+          }}
+        >
+          {errorMessage}
+        </p>
+      )}
+    </div>
+  );
+});
 
-StableAuthInput.displayName = "StableAuthInput";
+FormSelect.displayName = "FormSelect";
+
+// User Type Card Component
+const UserTypeCard = memo(({ type, isSelected, onSelect }) => {
+  return (
+    <button
+      onClick={() => onSelect(type.id)}
+      style={{
+        width: "100%",
+        padding: "20px 16px",
+        borderRadius: 16,
+        border: `2px solid ${isSelected ? ACCENT : GRAY_LIGHT}`,
+        background: isSelected ? ACCENT_LIGHT : WHITE,
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "all 0.2s ease",
+        marginBottom: 12,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+        }}
+      >
+        <span style={{ fontSize: 32 }}>{type.emoji}</span>
+        <div>
+          <h3
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: BLACK,
+              margin: "0 0 4px 0",
+              fontFamily: FONT,
+            }}
+          >
+            {type.title}
+          </h3>
+          <p
+            style={{
+              fontSize: 13,
+              color: GRAY,
+              margin: 0,
+              fontFamily: FONT,
+            }}
+          >
+            {type.description}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+});
+
+UserTypeCard.displayName = "UserTypeCard";
+
+// Step Indicator
+const StepIndicator = memo(({ currentStep, totalSteps }) => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        gap: 8,
+        marginBottom: 24,
+      }}
+    >
+      {Array.from({ length: totalSteps }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            width: i + 1 === currentStep ? 24 : 8,
+            height: 8,
+            borderRadius: 4,
+            background: i + 1 <= currentStep ? ACCENT : GRAY_LIGHT,
+            transition: "all 0.3s ease",
+          }}
+        />
+      ))}
+    </div>
+  );
+});
+
+StepIndicator.displayName = "StepIndicator";
 
 const AuthModal = ({
   open,
@@ -73,112 +322,715 @@ const AuthModal = ({
   clearError,
 }) => {
   const [mode, setMode] = useState("login");
+  const [step, setStep] = useState(1);
+  const [userType, setUserType] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [localError, setLocalError] = useState(null);
 
-  // Use refs for all form values - prevents re-renders during typing
-  const nameRef = useRef(null);
+  // Form refs
+  const fullNameRef = useRef(null);
   const emailRef = useRef(null);
-  const passRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
+  const businessNameRef = useRef(null);
+  const businessTypeRef = useRef(null);
+  const businessLocationRef = useRef(null);
+  const websiteRef = useRef(null);
+  const companyNameRef = useRef(null);
+  const industryRef = useRef(null);
+  const companySizeRef = useRef(null);
 
-  // Clear errors when modal opens/closes or mode changes
+  // Clear errors when modal opens/closes
   useEffect(() => {
     if (open) {
       setLocalError(null);
+      setFieldErrors({});
       if (clearError) clearError();
-      setTimeout(() => {
-        if (mode === "register" && nameRef.current) {
-          nameRef.current.focus();
-        } else if (emailRef.current) {
-          emailRef.current.focus();
-        }
-      }, 100);
     }
-  }, [open, mode, clearError]);
+  }, [open, clearError]);
 
   // Reset form when closing
   const handleClose = useCallback(() => {
-    if (nameRef.current) nameRef.current.value = "";
-    if (emailRef.current) emailRef.current.value = "";
-    if (passRef.current) passRef.current.value = "";
+    setMode("login");
+    setStep(1);
+    setUserType(null);
     setLocalError(null);
+    setFieldErrors({});
+    // Clear all refs
+    [
+      fullNameRef,
+      emailRef,
+      passwordRef,
+      confirmPasswordRef,
+      businessNameRef,
+      businessTypeRef,
+      businessLocationRef,
+      websiteRef,
+      companyNameRef,
+      industryRef,
+      companySizeRef,
+    ].forEach((ref) => {
+      if (ref.current) ref.current.value = "";
+    });
     onClose();
   }, [onClose]);
 
+  // Validation helpers
   const validateEmail = (email) => {
-    if (!email || !email.trim()) return "Please enter your email address";
+    if (!email || !email.trim()) return "Email is required";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address";
+    if (!emailRegex.test(email)) return "Please enter a valid email";
     return null;
   };
 
   const validatePassword = (pass) => {
-    if (!pass) return "Please enter your password";
+    if (!pass) return "Password is required";
     if (pass.length < 6) return "Password must be at least 6 characters";
     return null;
   };
 
-  const validateName = (name) => {
-    if (!name || !name.trim()) return "Please enter your business name";
-    if (name.trim().length < 2)
-      return "Business name must be at least 2 characters";
+  const validateConfirmPassword = (pass, confirm) => {
+    if (!confirm) return "Please confirm your password";
+    if (pass !== confirm) return "Passwords do not match";
     return null;
   };
 
-  const submit = useCallback(async () => {
+  const validateName = (name) => {
+    if (!name || !name.trim()) return "Full name is required";
+    if (name.trim().length < 2) return "Name must be at least 2 characters";
+    return null;
+  };
+
+  // Handle user type selection
+  const handleUserTypeSelect = (type) => {
+    setUserType(type);
     setLocalError(null);
+  };
+
+  // Continue to step 2
+  const handleContinue = () => {
+    if (!userType) {
+      setLocalError("Please select an option to continue");
+      return;
+    }
+    setStep(2);
+    setLocalError(null);
+  };
+
+  // Go back to step 1
+  const handleBack = () => {
+    setStep(1);
+    setLocalError(null);
+    setFieldErrors({});
+  };
+
+  // Switch between login and register
+  const toggleMode = useCallback(() => {
+    setMode((prev) => (prev === "login" ? "register" : "login"));
+    setStep(1);
+    setUserType(null);
+    setLocalError(null);
+    setFieldErrors({});
     if (clearError) clearError();
+  }, [clearError]);
 
-    const email = emailRef.current?.value || "";
-    const pass = passRef.current?.value || "";
-    const name = nameRef.current?.value || "";
+  // Validate all fields based on user type
+  const validateForm = () => {
+    const errors = {};
 
-    const emailError = validateEmail(email);
-    if (emailError) {
-      setLocalError(emailError);
-      return;
-    }
+    // Common fields
+    const nameError = validateName(fullNameRef.current?.value);
+    if (nameError) errors.fullName = nameError;
 
-    const passError = validatePassword(pass);
-    if (passError) {
-      setLocalError(passError);
-      return;
-    }
+    const emailError = validateEmail(emailRef.current?.value);
+    if (emailError) errors.email = emailError;
 
-    if (mode === "register") {
-      const nameError = validateName(name);
-      if (nameError) {
-        setLocalError(nameError);
-        return;
+    const passError = validatePassword(passwordRef.current?.value);
+    if (passError) errors.password = passError;
+
+    const confirmError = validateConfirmPassword(
+      passwordRef.current?.value,
+      confirmPasswordRef.current?.value,
+    );
+    if (confirmError) errors.confirmPassword = confirmError;
+
+    // Type-specific fields
+    if (userType === "organiser") {
+      if (!businessNameRef.current?.value?.trim()) {
+        errors.businessName = "Business name is required";
+      }
+      if (!businessTypeRef.current?.value) {
+        errors.businessType = "Business type is required";
       }
     }
+
+    if (userType === "corporate") {
+      if (!companyNameRef.current?.value?.trim()) {
+        errors.companyName = "Company name is required";
+      }
+      if (!industryRef.current?.value) {
+        errors.industry = "Industry is required";
+      }
+      if (!companySizeRef.current?.value) {
+        errors.companySize = "Company size is required";
+      }
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit registration
+  const submitRegistration = useCallback(async () => {
+    if (!validateForm()) return;
 
     setLoading(true);
+    setLocalError(null);
+
+    const registrationData = {
+      email: emailRef.current?.value?.trim(),
+      password: passwordRef.current?.value,
+      fullName: fullNameRef.current?.value?.trim(),
+      userType: userType,
+    };
+
+    // Add type-specific fields
+    if (userType === "organiser") {
+      registrationData.businessName = businessNameRef.current?.value?.trim();
+      registrationData.businessType = businessTypeRef.current?.value;
+      registrationData.businessLocation = businessLocationRef.current?.value?.trim();
+      registrationData.website = websiteRef.current?.value?.trim();
+    }
+
+    if (userType === "corporate") {
+      registrationData.companyName = companyNameRef.current?.value?.trim();
+      registrationData.industry = industryRef.current?.value;
+      registrationData.companySize = companySizeRef.current?.value;
+    }
+
     try {
-      if (mode === "login") {
-        await onLogin(email, pass);
-      } else {
-        await onRegister(email, pass, name);
-      }
-      if (nameRef.current) nameRef.current.value = "";
-      if (emailRef.current) emailRef.current.value = "";
-      if (passRef.current) passRef.current.value = "";
+      await onRegister(registrationData);
+      // Reset form on success
+      handleClose();
     } catch (err) {
-      setLocalError(err.message || "An error occurred. Please try again.");
+      setLocalError(err.message || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [mode, onLogin, onRegister, clearError]);
+  }, [userType, onRegister, handleClose]);
 
-  const toggleMode = useCallback(() => {
-    setMode((prev) => (prev === "login" ? "register" : "login"));
+  // Submit login
+  const submitLogin = useCallback(async () => {
+    const email = emailRef.current?.value || "";
+    const pass = passwordRef.current?.value || "";
+
+    const errors = {};
+    const emailError = validateEmail(email);
+    if (emailError) errors.email = emailError;
+
+    const passError = validatePassword(pass);
+    if (passError) errors.password = passError;
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    setLoading(true);
     setLocalError(null);
-    if (clearError) clearError();
-  }, [clearError]);
+
+    try {
+      await onLogin(email, pass);
+      handleClose();
+    } catch (err) {
+      setLocalError(err.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [onLogin, handleClose]);
+
+  // Handle field blur for real-time validation
+  const handleFieldBlur = (fieldName, validator) => {
+    return (e) => {
+      const error = validator(e.target.value);
+      setFieldErrors((prev) => ({
+        ...prev,
+        [fieldName]: error,
+      }));
+    };
+  };
 
   if (!open) return null;
 
   const displayError = localError || authError;
+
+  // Step 1: User Type Selection
+  const renderStep1 = () => (
+    <>
+      <h2
+        style={{
+          fontFamily: FONT,
+          fontSize: 22,
+          fontWeight: 700,
+          color: BLACK,
+          marginBottom: 6,
+          textAlign: "center",
+        }}
+      >
+        How will you use Fomoza?
+      </h2>
+      <p
+        style={{
+          fontFamily: FONT,
+          fontSize: 14,
+          color: GRAY,
+          marginBottom: 24,
+          textAlign: "center",
+        }}
+      >
+        Choose the option that best describes you
+      </p>
+
+      {displayError && (
+        <div
+          style={{
+            background: "#FEE2E2",
+            borderRadius: 10,
+            padding: "12px 16px",
+            marginBottom: 16,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: FONT,
+              fontSize: 13,
+              color: ACCENT,
+              margin: 0,
+            }}
+          >
+            {displayError}
+          </p>
+        </div>
+      )}
+
+      {USER_TYPES.map((type) => (
+        <UserTypeCard
+          key={type.id}
+          type={type}
+          isSelected={userType === type.id}
+          onSelect={handleUserTypeSelect}
+        />
+      ))}
+
+      <button
+        onClick={handleContinue}
+        disabled={!userType || loading}
+        style={{
+          width: "100%",
+          background: BLACK,
+          color: WHITE,
+          border: "none",
+          borderRadius: 24,
+          padding: "15px",
+          fontSize: 16,
+          fontWeight: 600,
+          cursor: !userType || loading ? "not-allowed" : "pointer",
+          fontFamily: FONT,
+          marginTop: 8,
+          opacity: !userType || loading ? 0.5 : 1,
+          transition: "transform 0.15s ease, opacity 0.15s ease",
+        }}
+        onMouseDown={(e) =>
+          userType && !loading && (e.currentTarget.style.transform = "scale(0.98)")
+        }
+        onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+      >
+        Continue
+      </button>
+
+      <p
+        style={{
+          textAlign: "center",
+          fontFamily: FONT,
+          fontSize: 14,
+          color: GRAY,
+          marginTop: 16,
+        }}
+      >
+        Already have an account?{" "}
+        <button
+          onClick={toggleMode}
+          style={{
+            background: "none",
+            border: "none",
+            color: ACCENT,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontSize: 14,
+            fontFamily: FONT,
+            padding: 0,
+          }}
+        >
+          Sign in
+        </button>
+      </p>
+    </>
+  );
+
+  // Step 2: Details Form
+  const renderStep2 = () => {
+    const typeLabel =
+      userType === "event_goer"
+        ? "Event Goer"
+        : userType === "organiser"
+          ? "Business / Organiser"
+          : "Corporate";
+
+    return (
+      <>
+        {/* Back Button */}
+        <button
+          onClick={handleBack}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            color: GRAY,
+            fontSize: 14,
+            fontFamily: FONT,
+            fontWeight: 500,
+          }}
+        >
+          ← Back
+        </button>
+
+        <h2
+          style={{
+            fontFamily: FONT,
+            fontSize: 22,
+            fontWeight: 700,
+            color: BLACK,
+            marginBottom: 6,
+          }}
+        >
+          Create your account
+        </h2>
+        <p
+          style={{
+            fontFamily: FONT,
+            fontSize: 14,
+            color: GRAY,
+            marginBottom: 24,
+          }}
+        >
+          {typeLabel} account
+        </p>
+
+        {displayError && (
+          <div
+            style={{
+              background: "#FEE2E2",
+              borderRadius: 10,
+              padding: "12px 16px",
+              marginBottom: 16,
+            }}
+          >
+            <p
+              style={{
+                fontFamily: FONT,
+                fontSize: 13,
+                color: ACCENT,
+                margin: 0,
+              }}
+            >
+              {displayError}
+            </p>
+          </div>
+        )}
+
+        {/* Full Name */}
+        <FormInput
+          inputRef={fullNameRef}
+          type="text"
+          placeholder="Full Name"
+          hasError={!!fieldErrors.fullName}
+          errorMessage={fieldErrors.fullName}
+          autoFocus
+          onBlur={handleFieldBlur("fullName", validateName)}
+        />
+
+        {/* Email */}
+        <FormInput
+          inputRef={emailRef}
+          type="email"
+          placeholder="Email address"
+          hasError={!!fieldErrors.email}
+          errorMessage={fieldErrors.email}
+          onBlur={handleFieldBlur("email", validateEmail)}
+        />
+
+        {/* Password */}
+        <FormInput
+          inputRef={passwordRef}
+          type="password"
+          placeholder="Password"
+          hasError={!!fieldErrors.password}
+          errorMessage={fieldErrors.password}
+          onBlur={handleFieldBlur("password", validatePassword)}
+        />
+
+        {/* Confirm Password */}
+        <FormInput
+          inputRef={confirmPasswordRef}
+          type="password"
+          placeholder="Confirm Password"
+          hasError={!!fieldErrors.confirmPassword}
+          errorMessage={fieldErrors.confirmPassword}
+        />
+
+        {/* Business / Organiser Fields */}
+        {userType === "organiser" && (
+          <>
+            <div style={{ marginTop: 8 }} />
+            <FormInput
+              inputRef={businessNameRef}
+              type="text"
+              placeholder="Business Name"
+              hasError={!!fieldErrors.businessName}
+              errorMessage={fieldErrors.businessName}
+            />
+            <FormSelect
+              selectRef={businessTypeRef}
+              options={BUSINESS_TYPES}
+              hasError={!!fieldErrors.businessType}
+              errorMessage={fieldErrors.businessType}
+            />
+            <FormInput
+              inputRef={businessLocationRef}
+              type="text"
+              placeholder="Business Location / City (Optional)"
+              hasError={!!fieldErrors.businessLocation}
+              errorMessage={fieldErrors.businessLocation}
+            />
+            <FormInput
+              inputRef={websiteRef}
+              type="text"
+              placeholder="Website or Social Link (Optional)"
+              hasError={!!fieldErrors.website}
+              errorMessage={fieldErrors.website}
+            />
+          </>
+        )}
+
+        {/* Corporate Fields */}
+        {userType === "corporate" && (
+          <>
+            <div style={{ marginTop: 8 }} />
+            <FormInput
+              inputRef={companyNameRef}
+              type="text"
+              placeholder="Company Name"
+              hasError={!!fieldErrors.companyName}
+              errorMessage={fieldErrors.companyName}
+            />
+            <FormSelect
+              selectRef={industryRef}
+              options={INDUSTRIES}
+              hasError={!!fieldErrors.industry}
+              errorMessage={fieldErrors.industry}
+            />
+            <FormSelect
+              selectRef={companySizeRef}
+              options={COMPANY_SIZES}
+              hasError={!!fieldErrors.companySize}
+              errorMessage={fieldErrors.companySize}
+            />
+          </>
+        )}
+
+        <button
+          onClick={submitRegistration}
+          disabled={loading}
+          style={{
+            width: "100%",
+            background: BLACK,
+            color: WHITE,
+            border: "none",
+            borderRadius: 24,
+            padding: "15px",
+            fontSize: 16,
+            fontWeight: 600,
+            cursor: loading ? "not-allowed" : "pointer",
+            fontFamily: FONT,
+            marginTop: 8,
+            marginBottom: 16,
+            opacity: loading ? 0.7 : 1,
+            transition: "transform 0.15s ease, opacity 0.15s ease",
+          }}
+          onMouseDown={(e) =>
+            !loading && (e.currentTarget.style.transform = "scale(0.98)")
+          }
+          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+        >
+          {loading ? "Creating account…" : "Create Account"}
+        </button>
+
+        <p
+          style={{
+            textAlign: "center",
+            fontFamily: FONT,
+            fontSize: 14,
+            color: GRAY,
+          }}
+        >
+          Already have an account?{" "}
+          <button
+            onClick={toggleMode}
+            style={{
+              background: "none",
+              border: "none",
+              color: ACCENT,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontSize: 14,
+              fontFamily: FONT,
+              padding: 0,
+            }}
+          >
+            Sign in
+          </button>
+        </p>
+      </>
+    );
+  };
+
+  // Login Form
+  const renderLogin = () => (
+    <>
+      <h2
+        style={{
+          fontFamily: FONT,
+          fontSize: 24,
+          fontWeight: 700,
+          color: BLACK,
+          marginBottom: 6,
+        }}
+      >
+        Welcome back
+      </h2>
+      <p
+        style={{
+          fontFamily: FONT,
+          fontSize: 15,
+          color: GRAY,
+          marginBottom: 24,
+        }}
+      >
+        Sign in to continue
+      </p>
+
+      {displayError && (
+        <div
+          style={{
+            background: "#FEE2E2",
+            borderRadius: 10,
+            padding: "12px 16px",
+            marginBottom: 16,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: FONT,
+              fontSize: 13,
+              color: ACCENT,
+              margin: 0,
+            }}
+          >
+            {displayError}
+          </p>
+        </div>
+      )}
+
+      <FormInput
+        inputRef={emailRef}
+        type="email"
+        placeholder="Email address"
+        hasError={!!fieldErrors.email}
+        errorMessage={fieldErrors.email}
+        autoFocus
+      />
+
+      <FormInput
+        inputRef={passwordRef}
+        type="password"
+        placeholder="Password"
+        hasError={!!fieldErrors.password}
+        errorMessage={fieldErrors.password}
+      />
+
+      <button
+        onClick={submitLogin}
+        disabled={loading}
+        style={{
+          width: "100%",
+          background: BLACK,
+          color: WHITE,
+          border: "none",
+          borderRadius: 24,
+          padding: "15px",
+          fontSize: 16,
+          fontWeight: 600,
+          cursor: loading ? "not-allowed" : "pointer",
+          fontFamily: FONT,
+          marginTop: 4,
+          marginBottom: 16,
+          opacity: loading ? 0.7 : 1,
+          transition: "transform 0.15s ease, opacity 0.15s ease",
+        }}
+        onMouseDown={(e) =>
+          !loading && (e.currentTarget.style.transform = "scale(0.98)")
+        }
+        onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+      >
+        {loading ? "Please wait…" : "Sign in"}
+      </button>
+
+      <p
+        style={{
+          textAlign: "center",
+          fontFamily: FONT,
+          fontSize: 14,
+          color: GRAY,
+        }}
+      >
+        Don't have an account?{" "}
+        <button
+          onClick={toggleMode}
+          style={{
+            background: "none",
+            border: "none",
+            color: ACCENT,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontSize: 14,
+            fontFamily: FONT,
+            padding: 0,
+          }}
+        >
+          Sign up
+        </button>
+      </p>
+    </>
+  );
 
   return (
     <div
@@ -199,6 +1051,8 @@ const AuthModal = ({
           background: WHITE,
           borderRadius: "20px 20px 0 0",
           padding: "24px 20px 40px",
+          maxHeight: "90vh",
+          overflowY: "auto",
           animation: "slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
       >
@@ -213,139 +1067,13 @@ const AuthModal = ({
           }}
         />
 
-        <h2
-          style={{
-            fontFamily: FONT,
-            fontSize: 24,
-            fontWeight: 700,
-            color: BLACK,
-            marginBottom: 6,
-          }}
-        >
-          {mode === "login" ? "Welcome back" : "Create account"}
-        </h2>
-        <p
-          style={{
-            fontFamily: FONT,
-            fontSize: 15,
-            color: GRAY,
-            marginBottom: 24,
-          }}
-        >
-          {mode === "login"
-            ? "Sign in to manage your events"
-            : "Join to publish local events"}
-        </p>
-
-        {displayError && (
-          <div
-            style={{
-              background: "#FEE2E2",
-              borderRadius: 10,
-              padding: "12px 16px",
-              marginBottom: 16,
-            }}
-          >
-            <p
-              style={{
-                fontFamily: FONT,
-                fontSize: 13,
-                color: "#EA4335",
-                margin: 0,
-              }}
-            >
-              {displayError}
-            </p>
-          </div>
-        )}
-
+        {/* Step indicator for registration */}
         {mode === "register" && (
-          <StableAuthInput
-            inputRef={nameRef}
-            type="text"
-            placeholder="Business name"
-            hasError={
-              displayError && displayError.toLowerCase().includes("name")
-            }
-          />
+          <StepIndicator currentStep={step} totalSteps={2} />
         )}
 
-        <StableAuthInput
-          inputRef={emailRef}
-          type="email"
-          placeholder="Email address"
-          hasError={
-            displayError && displayError.toLowerCase().includes("email")
-          }
-          autoFocus={mode === "login"}
-        />
-
-        <StableAuthInput
-          inputRef={passRef}
-          type="password"
-          placeholder="Password"
-          hasError={
-            displayError && displayError.toLowerCase().includes("password")
-          }
-        />
-
-        <button
-          onClick={submit}
-          disabled={loading}
-          style={{
-            width: "100%",
-            background: BLACK,
-            color: WHITE,
-            border: "none",
-            borderRadius: 24,
-            padding: "15px",
-            fontSize: 16,
-            fontWeight: 600,
-            cursor: loading ? "not-allowed" : "pointer",
-            fontFamily: FONT,
-            marginTop: 4,
-            marginBottom: 16,
-            opacity: loading ? 0.7 : 1,
-            transition: "transform 0.15s ease, opacity 0.15s ease",
-          }}
-          onMouseDown={(e) =>
-            !loading && (e.currentTarget.style.transform = "scale(0.98)")
-          }
-          onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-        >
-          {loading
-            ? "Please wait…"
-            : mode === "login"
-              ? "Sign in"
-              : "Create account"}
-        </button>
-
-        <p
-          style={{
-            textAlign: "center",
-            fontFamily: FONT,
-            fontSize: 14,
-            color: GRAY,
-          }}
-        >
-          {mode === "login" ? "Don't have an account? " : "Already have one? "}
-          <button
-            onClick={toggleMode}
-            style={{
-              background: "none",
-              border: "none",
-              color: ACCENT,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontSize: 14,
-              fontFamily: FONT,
-              padding: 0,
-            }}
-          >
-            {mode === "login" ? "Sign up" : "Sign in"}
-          </button>
-        </p>
+        {/* Content */}
+        {mode === "login" ? renderLogin() : step === 1 ? renderStep1() : renderStep2()}
       </div>
 
       <style>{`
