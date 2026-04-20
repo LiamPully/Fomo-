@@ -327,6 +327,7 @@ const AuthModal = ({
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [localError, setLocalError] = useState(null);
+  const [keepSignedIn, setKeepSignedIn] = useState(false);
 
   // Form refs
   const fullNameRef = useRef(null);
@@ -541,14 +542,14 @@ const AuthModal = ({
     setLocalError(null);
 
     try {
-      await onLogin(email, pass);
+      await onLogin(email, pass, keepSignedIn);
       handleClose();
     } catch (err) {
       setLocalError(err.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [onLogin, handleClose]);
+  }, [onLogin, handleClose, keepSignedIn]);
 
   // Handle field blur for real-time validation
   const handleFieldBlur = (fieldName, validator) => {
@@ -975,6 +976,39 @@ const AuthModal = ({
         hasError={!!fieldErrors.password}
         errorMessage={fieldErrors.password}
       />
+
+      {/* Keep me signed in checkbox */}
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 16,
+          cursor: "pointer",
+          userSelect: "none",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={keepSignedIn}
+          onChange={(e) => setKeepSignedIn(e.target.checked)}
+          style={{
+            width: 18,
+            height: 18,
+            accentColor: ACCENT,
+            cursor: "pointer",
+          }}
+        />
+        <span
+          style={{
+            fontFamily: FONT,
+            fontSize: 14,
+            color: GRAY,
+          }}
+        >
+          Keep me signed in
+        </span>
+      </label>
 
       <button
         onClick={submitLogin}

@@ -140,7 +140,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   BASE STYLES
+   BASE STYLES — ENSURE SCROLLING WORKS
    ═══════════════════════════════════════════════════════════════════ */
 
 * {
@@ -155,12 +155,43 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 100vh;
+  /* Enable smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent pull-to-refresh bounce on mobile */
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-y: visible;
+  overflow-x: hidden;
+}
+
+/* App Container — Full scroll enabled */
+.app-container {
+  width: 100%;
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg-primary);
+  position: relative;
+  overflow-y: visible;
+  overflow-x: hidden;
+  /* Enable momentum scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Smooth scrolling with momentum on iOS */
@@ -169,23 +200,37 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Horizontal scroll containers */
+.scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
 /* Hide scrollbar but keep functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   ANIMATIONS
+   ANIMATIONS — Fluid motion
    ═══════════════════════════════════════════════════════════════════ */
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -196,7 +241,7 @@ body {
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-12px);
+    transform: translateY(-20px);
   }
   to {
     opacity: 1;
@@ -207,6 +252,17 @@ body {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scaleIn {
@@ -223,7 +279,18 @@ body {
 @keyframes slideInRight {
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
   }
   to {
     opacity: 1;
@@ -244,20 +311,62 @@ body {
   to { transform: rotate(360deg); }
 }
 
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
-   COMPONENT PATTERNS — Airbnb-inspired with current colors
+   MOTION UTILITIES — Add these classes for fluid motion
    ═══════════════════════════════════════════════════════════════════ */
 
-/* App Container */
-.app-container {
-  width: 100%;
-  max-width: var(--app-max-width);
-  margin: 0 auto;
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: var(--bg-primary);
-  position: relative;
-  overflow-x: hidden;
+/* Entrance animations */
+.animate-fade-in {
+  animation: fadeIn 0.3s var(--ease-out) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s var(--ease-out) forwards;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.35s var(--ease-out) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s var(--ease-out) forwards;
+}
+
+/* Stagger delays */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
+/* Smooth transitions */
+.transition-all {
+  transition: all 0.25s var(--ease-out);
+}
+
+.transition-transform {
+  transition: transform 0.2s var(--ease-out);
+}
+
+.transition-opacity {
+  transition: opacity 0.2s var(--ease-out);
+}
+
+/* Press effect */
+.pressable:active {
+  transform: scale(0.97);
+  transition: transform 0.1s var(--ease-out);
+}
+
+/* Hover lift effect */
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1055,25 +1164,25 @@ a:focus-visible,
   }
 }
 
-/* Desktop Large */
+/* Desktop Large — ENSURE SCROLL WORKS */
 @media (min-width: 1024px) {
   :root {
     --app-max-width: 680px;
   }
 
   body {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
     min-height: 100vh;
-    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    background: var(--bg-primary);
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .app-container {
-    max-height: 90vh;
-    border-radius: 24px;
-    overflow: hidden;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.02), 0 20px 60px rgba(0,0,0,0.15);
+    max-height: none;
+    border-radius: 0;
+    overflow-y: visible;
+    box-shadow: none;
   }
 }
 
@@ -1117,12 +1226,6 @@ a:focus-visible,
       0 1px 3px rgba(0, 0, 0, 0.04),
       0 2px 4px rgba(0, 0, 0, 0.1);
   }
-}
-
-/* Dark mode support (optional, preserves warm colors) */
-@media (prefers-color-scheme: dark) {
-  /* Keeping light theme for now - the warm colors work better in light mode */
-  /* Can be extended later if dark mode is desired */
 }
 
 /* Print styles */

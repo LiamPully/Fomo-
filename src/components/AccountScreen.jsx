@@ -690,6 +690,8 @@ const AccountScreen = ({
   onCreateEvent,
   onManageEvents,
   onEditProfile,
+  onPrivacySettings,
+  onNotificationPrefs,
   onSignIn,
   onSignOut,
   onEditLocation,
@@ -773,8 +775,8 @@ const AccountScreen = ({
         <SectionTitle>Account</SectionTitle>
         <MenuItem icon="location" label="Location Settings" value={user.location || "Not set"} onClick={onEditLocation} />
         <MenuItem icon="edit" label="Profile Settings" onClick={onEditProfile} />
-        <MenuItem icon="shield" label="Privacy Settings" onClick={() => alert("Privacy settings coming soon!")} />
-        <MenuItem icon="bell" label="Notification Preferences" onClick={() => alert("Notification preferences coming soon!")} />
+        <MenuItem icon="shield" label="Privacy Settings" onClick={onPrivacySettings} />
+        <MenuItem icon="bell" label="Notification Preferences" onClick={onNotificationPrefs} />
 
         {/* Support Section */}
         <SectionTitle>Support</SectionTitle>

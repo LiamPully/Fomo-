@@ -2,6 +2,114 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useRateLimit } from './useRateLimit';
 
+// Storage keys
+const AUTH_STORAGE_KEY = 'fomoza_auth_session';
+const AUTH_PERSISTENT_KEY = 'fomoza_auth_persistent';
+const TOKEN_EXPIRY_DAYS = 30;
+
+// Storage helpers
+const storage = {
+  local: {
+    get: (key) => {
+      try {
+        const item = localStorage.getItem(key);
+        return item ? JSON.parse(item) : null;
+      } catch {
+        return null;
+      }
+    },
+    set: (key, value) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {
+        console.error('localStorage set error:', e);
+      }
+    },
+    remove: (key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.error('localStorage remove error:', e);
+      }
+    },
+  },
+  session: {
+    get: (key) => {
+      try {
+        const item = sessionStorage.getItem(key);
+        return item ? JSON.parse(item) : null;
+      } catch {
+        return null;
+      }
+    },
+    set: (key, value) => {
+      try {
+        sessionStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {
+        console.error('sessionStorage set error:', e);
+      }
+    },
+    remove: (key) => {
+      try {
+        sessionStorage.removeItem(key);
+      } catch (e) {
+        console.error('sessionStorage remove error:', e);
+      }
+    },
+  },
+};
+
+// Save session to storage
+const saveSession = (session, keepSignedIn) => {
+  if (!session) return;
+
+  const sessionData = {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_at: Date.now() + (TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000),
+    user: session.user,
+  };
+
+  if (keepSignedIn) {
+    storage.local.set(AUTH_PERSISTENT_KEY, sessionData);
+  } else {
+    storage.session.set(AUTH_STORAGE_KEY, sessionData);
+  }
+};
+
+// Clear all auth storage
+const clearAllAuthStorage = () => {
+  storage.local.remove(AUTH_PERSISTENT_KEY);
+  storage.session.remove(AUTH_STORAGE_KEY);
+};
+
+// Get stored session
+const getStoredSession = () => {
+  // Check localStorage first (persistent)
+  const persistentSession = storage.local.get(AUTH_PERSISTENT_KEY);
+  if (persistentSession) {
+    // Check if expired
+    if (Date.now() > persistentSession.expires_at) {
+      storage.local.remove(AUTH_PERSISTENT_KEY);
+      return null;
+    }
+    return { ...persistentSession, isPersistent: true };
+  }
+
+  // Check sessionStorage (session only)
+  const sessionData = storage.session.get(AUTH_STORAGE_KEY);
+  if (sessionData) {
+    // Check if expired
+    if (Date.now() > sessionData.expires_at) {
+      storage.session.remove(AUTH_STORAGE_KEY);
+      return null;
+    }
+    return { ...sessionData, isPersistent: false };
+  }
+
+  return null;
+};
+
 // Validation helper functions
 const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -244,7 +352,7 @@ export function useAuth() {
   }, [fetchBusiness, createBusinessProfile]);
 
   // Sign in with email/password
-  const signIn = useCallback(async (email, password) => {
+  const signIn = useCallback(async (email, password, keepSignedIn = false) => {
     setError(null);
 
     // Check rate limiting
@@ -278,7 +386,10 @@ export function useAuth() {
 
       if (authError) throw authError;
 
-      if (authData.user) {
+      if (authData.user && authData.session) {
+        // Save session based on "Keep me signed in" preference
+        saveSession(authData.session, keepSignedIn);
+
         // Wait for session to propagate before fetching business
         await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -294,7 +405,7 @@ export function useAuth() {
 
         setUser(authData.user);
         setBusiness(businessData);
-        return { success: true, error: null };
+        return { success: true, error: null, keepSignedIn };
       }
     } catch (err) {
       const sanitized = sanitizeError(err);
@@ -309,6 +420,10 @@ export function useAuth() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+
+      // Clear all auth storage on logout
+      clearAllAuthStorage();
+
       setUser(null);
       setBusiness(null);
       return { success: true, error: null };
@@ -321,9 +436,29 @@ export function useAuth() {
 
   // Listen for auth state changes
   useEffect(() => {
-    // Check for existing session
+    // Check for existing session from storage or Supabase
     const checkSession = async () => {
       try {
+        // First check localStorage/sessionStorage
+        const storedSession = getStoredSession();
+
+        if (storedSession) {
+          // Restore the session to Supabase
+          const { data: { session }, error } = await supabase.auth.setSession({
+            access_token: storedSession.access_token,
+            refresh_token: storedSession.refresh_token,
+          });
+
+          if (!error && session?.user) {
+            setUser(session.user);
+            const businessData = await fetchBusiness(session.user.id);
+            setBusiness(businessData);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Fallback: check Supabase native session
         const session = await refreshSession();
 
         if (session?.user) {
@@ -333,6 +468,8 @@ export function useAuth() {
         }
       } catch (err) {
         console.error('Session check error:', err);
+        // Clear invalid stored sessions
+        clearAllAuthStorage();
       } finally {
         setLoading(false);
       }
@@ -361,8 +498,14 @@ export function useAuth() {
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setBusiness(null);
+          clearAllAuthStorage();
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           setUser(session.user);
+          // Update stored session with new tokens
+          const stored = getStoredSession();
+          if (stored) {
+            saveSession(session, stored.isPersistent);
+          }
         }
         setLoading(false);
       }
