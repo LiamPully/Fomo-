@@ -129,7 +129,6 @@ export default defineConfig(({ mode }) => {
             // Split vendor libraries into separate chunks
             'vendor-react': ['react', 'react-dom'],
             'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-neon': ['@neondatabase/serverless'],
           }
         }
       },
