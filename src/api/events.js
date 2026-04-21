@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { validateEventData, validateUUID } from '../lib/validation'
+import { generateAttendeeData } from '../lib/theme'
 
 // Fetch all published events
 export const fetchEvents = async (filters = {}) => {
@@ -72,7 +73,14 @@ export const fetchEvents = async (filters = {}) => {
     const { data, error } = await query
 
     if (error) throw error
-    return { data, error: null }
+
+    // Add attendee data to each event
+    const eventsWithAttendees = data?.map(event => ({
+      ...event,
+      ...generateAttendeeData(event.id)
+    })) || [];
+
+    return { data: eventsWithAttendees, error: null }
   } catch (error) {
     console.error('Error fetching events:', error)
     return { data: null, error }

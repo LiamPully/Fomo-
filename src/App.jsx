@@ -6,6 +6,11 @@ import { MAIN_CATEGORIES, getCategoryColor } from "./lib/categories";
 import { fetchEvents, createEvent, updateEvent, deleteEvent } from "./api/events";
 import { canPublishEvent } from "./api/businesses";
 import { calculateDistance } from "./lib/location";
+import {
+  BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ACCENT_LIGHT, FONT,
+  SHADOW_CARD, SHADOW_CARD_HOVER, SHADOW_BUTTON, SHADOW_NAV,
+  LIGHT_THEME, getSASTGreeting, getUserFirstName
+} from "./lib/theme";
 import CategoryDropdown from "./components/CategoryDropdown";
 import FilterModal from "./components/FilterModal";
 import { SkeletonList } from "./components/SkeletonCard";
@@ -19,23 +24,6 @@ import PrivacySettingsModal from "./components/PrivacySettingsModal";
 import NotificationPreferencesModal from "./components/NotificationPreferencesModal";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./styles/airbnb-inspired.css";
-
-// Airbnb-Inspired Design Tokens (kept current warm colors)
-const BG = "#F8F9FA";
-const WHITE = "#FFFFFF";
-const BLACK = "#1A1A1A";
-const GRAY = "#5F6368";
-const GRAY_LIGHT = "#F1F3F4";
-const GRAY_MEDIUM = "#80868B";
-const ACCENT = "#E85D3F";
-const ACCENT_LIGHT = "rgba(232, 93, 63, 0.15)";
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-
-// Airbnb Shadow System (three-layer warm shadows)
-const SHADOW_CARD = "0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.1)";
-const SHADOW_CARD_HOVER = "0 0 0 1px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.12)";
-const SHADOW_BUTTON = "0 4px 12px rgba(0,0,0,0.08)";
-const SHADOW_NAV = "0 -2px 10px rgba(0,0,0,0.05)";
 
 // Icon Component - memoized to prevent re-renders
 const Icon = memo(({ name, size = 20, color = BLACK }) => {
@@ -569,6 +557,8 @@ const HorizontalEventCard = memo(({ event, onClick, animationDelay = 0 }) => {
         <img
           src={imgError ? `https://picsum.photos/seed/${event.id}/400/250` : event.img}
           alt={event.title}
+          loading="lazy"
+          decoding="async"
           onError={() => setImgError(true)}
           style={{
             width: '100%',
@@ -771,22 +761,19 @@ const AnimatedSectionTitle = memo(({ title, animationDelay = 0 }) => {
 
 AnimatedSectionTitle.displayName = 'AnimatedSectionTitle';
 
-// Dark Theme Design Tokens
-const DARK_BG = '#1A1A2E';
-const DARK_CARD = '#252542';
-const DARK_CARD_HOVER = '#2E2E52';
-const DARK_TEXT = '#FFFFFF';
-const DARK_TEXT_SECONDARY = '#A0A0C0';
+// Dark Theme Design Tokens - DEPRECATED
+// Use LIGHT_THEME from theme.js instead for visual consistency across all screens
+const DARK_BG = LIGHT_THEME.background;
+const DARK_CARD = LIGHT_THEME.card;
+const DARK_CARD_HOVER = LIGHT_THEME.cardHover;
+const DARK_TEXT = LIGHT_THEME.textPrimary;
+const DARK_TEXT_SECONDARY = LIGHT_THEME.textSecondary;
 const CORAL = '#E8503A';
 const CORAL_LIGHT = 'rgba(232, 80, 58, 0.15)';
 
-// Get greeting based on time of day
-const getGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-};
+// Legacy greeting function - use getSASTGreeting from theme.js for SAST timezone
+// Kept for backward compatibility
+const getGreeting = () => getSASTGreeting();
 
 // Category Pill Button (Dark Theme)
 const DarkCategoryPill = memo(({ label, isActive, onClick, delay = 0 }) => {
@@ -851,6 +838,8 @@ const FeaturedEventCard = memo(({ event, onClick }) => {
         <img
           src={event.img}
           alt={event.title}
+          loading="lazy"
+          decoding="async"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
         <div style={{
@@ -949,6 +938,8 @@ const CompactEventCard = memo(({ event, onClick, delay = 0 }) => {
         <img
           src={event.img}
           alt={event.title}
+          loading="lazy"
+          decoding="async"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
         <div style={{
@@ -995,20 +986,25 @@ const EventCardWithAttendees = memo(({ event, onClick, delay = 0 }) => {
     return () => clearTimeout(timer);
   }, [delay]);
 
+  // Use real attendee data from event or fallback
+  const attendeeCount = event.attendeeCount || 0;
+  const attendeeAvatars = event.attendeeAvatars || [];
+
   return (
     <div
       onClick={() => onClick?.(event)}
       style={{
         display: 'flex',
         gap: 14,
-        background: DARK_CARD,
+        background: LIGHT_THEME.card,
         borderRadius: 16,
         padding: 14,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+        boxShadow: LIGHT_THEME.shadowCard,
         transform: isVisible ? 'translateX(0)' : 'translateX(-20px)',
         opacity: isVisible ? 1 : 0,
-        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: LIGHT_THEME.transitionSlow,
         cursor: 'pointer',
+        border: `1px solid ${LIGHT_THEME.border}`,
       }}
     >
       {/* Image */}
@@ -1022,6 +1018,8 @@ const EventCardWithAttendees = memo(({ event, onClick, delay = 0 }) => {
         <img
           src={event.img}
           alt={event.title}
+          loading="lazy"
+          decoding="async"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </div>
@@ -1032,8 +1030,8 @@ const EventCardWithAttendees = memo(({ event, onClick, delay = 0 }) => {
           display: 'inline-block',
           padding: '3px 8px',
           borderRadius: 6,
-          background: CORAL_LIGHT,
-          color: CORAL,
+          background: ACCENT_LIGHT,
+          color: ACCENT,
           fontSize: 11,
           fontWeight: 600,
           marginBottom: 6,
@@ -1044,7 +1042,7 @@ const EventCardWithAttendees = memo(({ event, onClick, delay = 0 }) => {
         <h4 style={{
           fontSize: 15,
           fontWeight: 600,
-          color: DARK_TEXT,
+          color: LIGHT_THEME.textPrimary,
           marginBottom: 4,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -1053,23 +1051,37 @@ const EventCardWithAttendees = memo(({ event, onClick, delay = 0 }) => {
           {event.title}
         </h4>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <Icon name="calendar" size={12} color={DARK_TEXT_SECONDARY} />
-          <span style={{ fontSize: 12, color: DARK_TEXT_SECONDARY }}>{event.dateLabel}</span>
+          <Icon name="calendar" size={12} color={GRAY} />
+          <span style={{ fontSize: 12, color: GRAY }}>{event.dateLabel}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="location" size={12} color={DARK_TEXT_SECONDARY} />
-          <span style={{ fontSize: 12, color: DARK_TEXT_SECONDARY, flex: 1 }}>{event.area}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <div style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: '#4ADE80',
-            }} />
-            <span style={{ fontSize: 12, color: '#4ADE80', fontWeight: 600 }}>
-              {Math.floor(Math.random() * 50) + 10} going
-            </span>
-          </div>
+          <Icon name="location" size={12} color={GRAY} />
+          <span style={{ fontSize: 12, color: GRAY, flex: 1 }}>{event.area}</span>
+          {attendeeCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginRight: 4 }}>
+                {attendeeAvatars.slice(0, 3).map((avatar, i) => (
+                  <img
+                    key={i}
+                    src={avatar}
+                    alt=""
+                    loading="lazy"
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      border: `2px solid ${LIGHT_THEME.card}`,
+                      marginLeft: i > 0 ? -8 : 0,
+                      objectFit: 'cover',
+                    }}
+                  />
+                ))}
+              </div>
+              <span style={{ fontSize: 12, color: LIGHT_THEME.success, fontWeight: 600 }}>
+                {attendeeCount} going
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1276,7 +1288,8 @@ const HomeScreen = memo(({
       .slice(0, 5);
   }, [events]);
 
-  const userName = user?.name?.split(' ')[0] || user?.firstName || 'there';
+  // Use getUserFirstName for consistent first name extraction
+  const userName = getUserFirstName(user);
 
   return (
     <div style={{
@@ -1935,6 +1948,8 @@ const CalendarEventCard = memo(({ event, onClick, animationDelay = 0 }) => {
         <img
           src={imgError ? `https://picsum.photos/seed/${event.id}/200/200` : event.img}
           alt={event.title}
+          loading="lazy"
+          decoding="async"
           onError={() => setImgError(true)}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
@@ -2256,6 +2271,8 @@ const CalendarScreen = memo(({
                             key={event.id}
                             src={event.img}
                             alt=""
+                            loading="lazy"
+                            decoding="async"
                             style={{
                               width: 20,
                               height: 20,
@@ -3561,6 +3578,8 @@ export default function App() {
                 <img
                   src={selectedEvent.img}
                   alt={selectedEvent.title}
+                  loading="eager"
+                  decoding="async"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>

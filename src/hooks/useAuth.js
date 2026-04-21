@@ -337,10 +337,15 @@ export function useAuth() {
         }
 
         // Store user type in session for routing decisions
-        setUser({
+        // Add computed firstName from full_name or email
+        const enhancedUser = {
           ...authData.user,
           user_type: userType,
-        });
+          firstName: authData.user.user_metadata?.full_name?.split(' ')[0]
+            || authData.user.email?.split('@')[0]
+            || 'User'
+        };
+        setUser(enhancedUser);
         setBusiness(businessData);
         return { success: true, error: null, userType };
       }
@@ -403,7 +408,14 @@ export function useAuth() {
           );
         }
 
-        setUser(authData.user);
+        // Add computed firstName to user object
+        const enhancedUser = {
+          ...authData.user,
+          firstName: authData.user.user_metadata?.full_name?.split(' ')[0]
+            || authData.user.email?.split('@')[0]
+            || 'User'
+        };
+        setUser(enhancedUser);
         setBusiness(businessData);
         return { success: true, error: null, keepSignedIn };
       }
@@ -481,7 +493,14 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          setUser(session.user);
+          // Add computed firstName to user object
+          const enhancedUser = {
+            ...session.user,
+            firstName: session.user.user_metadata?.full_name?.split(' ')[0]
+              || session.user.email?.split('@')[0]
+              || 'User'
+          };
+          setUser(enhancedUser);
           // Small delay for trigger to complete
           await new Promise(resolve => setTimeout(resolve, 100));
           let businessData = await fetchBusiness(session.user.id);
