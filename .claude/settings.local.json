@@ -36,7 +36,13 @@
       "Bash(git rm:*)",
       "Bash(npm test:*)",
       "Bash(npx --yes cloudflared tunnel --url http://localhost:3000)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(grep -n '`' src/components/EmptyState.jsx)",
+      "Bash(grep -n '\\\\\\\\`' src/App.jsx src/components/*.jsx)",
+      "Bash(grep -v \"style={\\\\`\")",
+      "Bash(grep *)",
+      "Bash(git pull *)",
+      "Bash(git *)"
     ]
   }
 }
