@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { getCategoryColor } from '../lib/categories';
+import { getCategoryCover } from '../lib/covers';
+import { OVERLAY_DARK, GRAY_LIGHT, ACCENT, ACCENT_LIGHT, GRAY } from '../lib/theme';
 import '../styles/design-system-v2.css';
 
 /**
@@ -15,14 +17,11 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
 
   // Get image URL - support both single image and multiple images
   const getImageUrl = () => {
-    // If event has images array, use the first one
     if (event.images && Array.isArray(event.images) && event.images.length > 0) {
       return event.images[0].url || event.images[0];
     }
-    // Legacy support for single image
     if (event.img) return event.img;
-    // Fallback
-    return null;
+    return getCategoryCover(event.category);
   };
 
   // Get thumbnail URL
@@ -30,7 +29,8 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
     if (event.images && Array.isArray(event.images) && event.images.length > 0) {
       return event.images[0].thumbnailUrl || event.images[0].url || event.images[0];
     }
-    return getImageUrl();
+    if (event.img) return event.img;
+    return getCategoryCover(event.category);
   };
 
   const imageCount = event.images?.length || (event.img ? 1 : 0);
@@ -90,7 +90,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
             width: 80,
             height: 80,
             borderRadius: 12,
-            background: imageError || !mainImage ? 'var(--bg-tertiary)' : 'transparent',
+            background: imageError ? GRAY_LIGHT : 'transparent',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -99,7 +99,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
             position: 'relative',
           }}
         >
-          {mainImage && !imageError ? (
+          {!imageError ? (
             <>
               <img
                 src={getThumbnailUrl()}
@@ -118,7 +118,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
                     position: 'absolute',
                     bottom: 4,
                     right: 4,
-                    background: 'rgba(0,0,0,0.7)',
+                    background: OVERLAY_DARK,
                     color: 'white',
                     fontSize: 10,
                     fontWeight: 600,
@@ -131,7 +131,15 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
               )}
             </>
           ) : (
-            <span style={{ fontSize: 32 }}>{emoji}</span>
+            <img
+              src={getCategoryCover(event.category)}
+              alt=""
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
           )}
         </div>
 
@@ -146,7 +154,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
           >
             <span
               style={{
-                fontSize: 'var(--text-xs)',
+                fontSize: ''12px'',
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
@@ -158,12 +166,12 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
             {dateInfo.isToday && (
               <span
                 style={{
-                  fontSize: 'var(--text-xs)',
+                  fontSize: ''12px'',
                   fontWeight: 700,
-                  color: 'var(--accent)',
-                  background: 'var(--accent-bg)',
+                  color: ACCENT,
+                  background: ACCENT_LIGHT,
                   padding: '2px 8px',
-                  borderRadius: 'var(--radius-full)',
+                  borderRadius: ''9999px'',
                 }}
               >
                 Today
@@ -194,7 +202,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
                 style={{
                   marginLeft: 'auto',
                   fontWeight: 600,
-                  color: 'var(--accent)',
+                  color: ACCENT,
                 }}
               >
                 {event.distance < 1
@@ -220,7 +228,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
       }}
     >
       <div className="hero-card__image-wrapper" style={{ position: 'relative' }}>
-        {mainImage && !imageError ? (
+        {!imageError ? (
           <>
             <img
               src={mainImage}
@@ -235,7 +243,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
                   position: 'absolute',
                   bottom: 12,
                   left: 12,
-                  background: 'rgba(0,0,0,0.7)',
+                  background: OVERLAY_DARK,
                   color: 'white',
                   fontSize: 12,
                   fontWeight: 600,
@@ -256,19 +264,11 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
             )}
           </>
         ) : (
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'var(--bg-tertiary)',
-              fontSize: 64,
-            }}
-          >
-            {emoji}
-          </div>
+          <img
+            src={getCategoryCover(event.category)}
+            alt={event.title}
+            className="hero-card__image"
+          />
         )}
 
         {/* Today badge */}
@@ -278,11 +278,11 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
               position: 'absolute',
               top: 16,
               right: 16,
-              background: 'var(--accent)',
+              background: ACCENT,
               color: 'white',
               padding: '6px 14px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: 'var(--text-sm)',
+              borderRadius: ''9999px'',
+              fontSize: '14px',
               fontWeight: 700,
               boxShadow: '0 2px 8px rgba(199, 91, 57, 0.3)',
             }}
@@ -323,8 +323,8 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
             alignItems: 'center',
             gap: 6,
             marginTop: 12,
-            fontSize: 'var(--text-sm)',
-            color: 'var(--text-secondary)',
+            fontSize: '14px',
+            color: GRAY,
           }}
         >
           <svg
@@ -344,7 +344,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
               style={{
                 marginLeft: 'auto',
                 fontWeight: 600,
-                color: 'var(--accent)',
+                color: ACCENT,
               }}
             >
               {event.distance < 1

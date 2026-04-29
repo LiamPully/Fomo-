@@ -1,19 +1,10 @@
 import { useState, useCallback, useMemo } from "react";
+import { getEventCover } from "../lib/covers";
+import {
+  BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ACCENT_LIGHT, FONT,
+  SHADOW_CARD, SHADOW_CARD_HOVER, SHADOW_BUTTON, OVERLAY_LIGHT, OVERLAY_DARK, ERROR,
+} from "../lib/theme";
 import "../styles/airbnb-inspired.css";
-
-// Airbnb-Inspired Design Tokens
-const BG = "#F8F9FA";
-const WHITE = "#FFFFFF";
-const BLACK = "#1A1A1A";
-const GRAY = "#5F6368";
-const GRAY_LIGHT = "#F1F3F4";
-const GRAY_MEDIUM = "#80868B";
-const ACCENT = "#E85D3F";
-const ACCENT_LIGHT = "#FFF5F2";
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-
-const SHADOW_CARD = "0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.1)";
-const SHADOW_CARD_HOVER = "0 0 0 1px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.12)";
 
 // Icon Component
 const Icon = ({ name, size = 20, color = BLACK }) => {
@@ -157,7 +148,7 @@ const Avatar = ({ name, size = 72, photoUrl, onClick }) => {
         fontWeight: 600,
         color: WHITE,
         flexShrink: 0,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+        boxShadow: SHADOW_BUTTON,
         border: "none",
         cursor: onClick ? "pointer" : "default",
         position: "relative",
@@ -173,7 +164,7 @@ const Avatar = ({ name, size = 72, photoUrl, onClick }) => {
             left: 0,
             right: 0,
             height: "30%",
-            background: "rgba(0,0,0,0.4)",
+            background: OVERLAY_LIGHT,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -411,7 +402,7 @@ const MyEventsSection = ({ events, onEventClick }) => {
                   width: 48,
                   height: 48,
                   borderRadius: 8,
-                  background: `url(${event.img}) center/cover`,
+                  background: `url(${getEventCover(event)}) center/cover`,
                   flexShrink: 0,
                 }}
               />
@@ -472,13 +463,13 @@ const MenuItem = ({ icon, label, value, onClick, danger }) => (
       textAlign: "left",
     }}
   >
-    <Icon name={icon} size={20} color={danger ? "#EA4335" : GRAY} />
+    <Icon name={icon} size={20} color={danger ? ERROR : GRAY} />
     <span
       style={{
         flex: 1,
         fontSize: 15,
         fontWeight: 500,
-        color: danger ? "#EA4335" : BLACK,
+        color: danger ? ERROR : BLACK,
         fontFamily: FONT,
       }}
     >
@@ -620,7 +611,7 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText
         position: "fixed",
         inset: 0,
         zIndex: 400,
-        background: "rgba(0,0,0,0.5)",
+        background: OVERLAY_DARK,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -667,7 +658,7 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText
               padding: "12px",
               borderRadius: 10,
               border: "none",
-              background: danger ? "#EA4335" : BLACK,
+              background: danger ? ERROR : BLACK,
               fontSize: 15,
               fontWeight: 600,
               color: WHITE,

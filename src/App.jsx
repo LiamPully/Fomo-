@@ -3,13 +3,15 @@ import { useLocation } from "./hooks/useLocation";
 import { useAuth } from "./hooks/useAuth";
 import { useScrollPosition } from "./hooks/useScrollPosition";
 import { MAIN_CATEGORIES, getCategoryColor } from "./lib/categories";
+import { getEventCover } from "./lib/covers";
 import { fetchEvents, createEvent, updateEvent, deleteEvent } from "./api/events";
 import { canPublishEvent } from "./api/businesses";
 import { calculateDistance } from "./lib/location";
 import {
   BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ACCENT_LIGHT, FONT,
-  SHADOW_CARD, SHADOW_CARD_HOVER, SHADOW_BUTTON, SHADOW_NAV,
-  LIGHT_THEME, getSASTGreeting, getUserFirstName
+  SHADOW_CARD, SHADOW_CARD_HOVER, SHADOW_BUTTON, SHADOW_NAV, SHADOW_SM,
+  LIGHT_THEME, getSASTGreeting, getUserFirstName,
+  ERROR, ERROR_LIGHT, SUCCESS, OVERLAY_DARK,
 } from "./lib/theme";
 import CategoryDropdown from "./components/CategoryDropdown";
 import FilterModal from "./components/FilterModal";
@@ -149,7 +151,7 @@ const CategoryPill = memo(({ label, isActive, color, onClick }) => {
         whiteSpace: 'nowrap',
         transform: isPressed ? 'scale(0.95)' : 'scale(1)',
         transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
-        boxShadow: isActive ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
+        boxShadow: isActive ? 'none' : SHADOW_SM,
       }}
     >
       {label}
@@ -214,7 +216,7 @@ const ContactButton = ({ href, icon, label, variant = 'default', external }) => 
         transform: isPressed ? 'scale(0.96)' : 'scale(1)',
         transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
         boxShadow: isPressed
-          ? '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.08)'
+          ? SHADOW_SM
           : SHADOW_CARD,
       }}
     >
@@ -249,7 +251,7 @@ const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions, animati
 
   const getShadow = () => {
     if (isPressed) {
-      return '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.08)';
+      return SHADOW_SM;
     }
     if (isHovered) {
       return SHADOW_CARD_HOVER;
@@ -292,7 +294,7 @@ const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions, animati
       <div style={{ height: 180, overflow: 'hidden', position: 'relative' }}>
         {!imgError ? (
           <img
-            src={event.img}
+            src={getEventCover(event)}
             alt={event.title}
             loading="lazy"
             decoding="async"
@@ -300,14 +302,13 @@ const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions, animati
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <div style={{
-            width: '100%', height: '100%',
-            background: GRAY_LIGHT,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 48
-          }}>
-            {event.category === 'Market' ? '' : event.category === 'Fun' ? '' : ''}
-          </div>
+          <img
+            src={getEventCover(event)}
+            alt={event.title}
+            loading="lazy"
+            decoding="async"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
         )}
         {event.today && (
           <div style={{
@@ -322,7 +323,7 @@ const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions, animati
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            boxShadow: SHADOW_BUTTON,
           }}>
             Today
           </div>
@@ -340,7 +341,7 @@ const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions, animati
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            boxShadow: SHADOW_BUTTON,
           }}>
             Draft
           </div>
@@ -422,16 +423,16 @@ const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions, animati
                 flex: 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '8px 12px',
-                background: '#FEE2E2',
+                background: ERROR_LIGHT,
                 border: 'none',
                 borderRadius: 10,
                 fontSize: 13,
                 fontWeight: 600,
-                color: '#EA4335',
+                color: ERROR,
                 cursor: 'pointer',
               }}
             >
-              <Icon name="trash" size={14} color="#EA4335" />
+              <Icon name="trash" size={14} color={ERROR} />
               Delete
             </button>
           </div>
@@ -544,7 +545,7 @@ const HorizontalEventCard = memo(({ event, onClick, animationDelay = 0 }) => {
         borderRadius: 16,
         overflow: 'hidden',
         boxShadow: isPressed
-          ? '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.08)'
+          ? SHADOW_SM
           : SHADOW_CARD,
         transform: isPressed ? 'scale(0.98)' : isVisible ? 'scale(1)' : 'scale(0.98)',
         opacity: isVisible ? 1 : 0,
@@ -555,7 +556,7 @@ const HorizontalEventCard = memo(({ event, onClick, animationDelay = 0 }) => {
       {/* Image */}
       <div style={{ position: 'relative', height: 140 }}>
         <img
-          src={imgError ? `https://picsum.photos/seed/${event.id}/400/250` : event.img}
+          src={getEventCover(event)}
           alt={event.title}
           loading="lazy"
           decoding="async"
@@ -768,8 +769,7 @@ const DARK_CARD = LIGHT_THEME.card;
 const DARK_CARD_HOVER = LIGHT_THEME.cardHover;
 const DARK_TEXT = LIGHT_THEME.textPrimary;
 const DARK_TEXT_SECONDARY = LIGHT_THEME.textSecondary;
-const CORAL = '#E8503A';
-const CORAL_LIGHT = 'rgba(232, 80, 58, 0.15)';
+// ACCENT and ACCENT_LIGHT are imported from theme.js
 
 // Legacy greeting function - use getSASTGreeting from theme.js for SAST timezone
 // Kept for backward compatibility
@@ -791,7 +791,7 @@ const DarkCategoryPill = memo(({ label, isActive, onClick, delay = 0 }) => {
         padding: '10px 20px',
         borderRadius: 999,
         border: 'none',
-        background: isActive ? CORAL : DARK_CARD,
+        background: isActive ? ACCENT : DARK_CARD,
         color: isActive ? DARK_TEXT : DARK_TEXT_SECONDARY,
         fontSize: 14,
         fontWeight: 600,
@@ -800,7 +800,7 @@ const DarkCategoryPill = memo(({ label, isActive, onClick, delay = 0 }) => {
         transform: isVisible ? 'translateY(0)' : 'translateY(10px)',
         opacity: isVisible ? 1 : 0,
         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        boxShadow: isActive ? '0 4px 16px rgba(232, 80, 58, 0.3)' : '0 2px 8px rgba(0,0,0,0.2)',
+        boxShadow: isActive ? '0 4px 16px rgba(232, 80, 58, 0.3)' : SHADOW_BUTTON,
       }}
     >
       {label}
@@ -826,7 +826,7 @@ const FeaturedEventCard = memo(({ event, onClick }) => {
         background: DARK_CARD,
         borderRadius: 24,
         overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+        boxShadow: SHADOW_CARD_HOVER,
         transform: isVisible ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.98)',
         opacity: isVisible ? 1 : 0,
         transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -836,7 +836,7 @@ const FeaturedEventCard = memo(({ event, onClick }) => {
       {/* Image */}
       <div style={{ position: 'relative', height: 180 }}>
         <img
-          src={event.img}
+          src={getEventCover(event)}
           alt={event.title}
           loading="lazy"
           decoding="async"
@@ -854,7 +854,7 @@ const FeaturedEventCard = memo(({ event, onClick }) => {
           position: 'absolute',
           top: 12,
           right: 12,
-          background: CORAL,
+          background: ACCENT,
           color: DARK_TEXT,
           padding: '6px 14px',
           borderRadius: 20,
@@ -879,7 +879,7 @@ const FeaturedEventCard = memo(({ event, onClick }) => {
           {event.title}
         </h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <Icon name="calendar" size={16} color={CORAL} />
+          <Icon name="calendar" size={16} color={ACCENT} />
           <span style={{ fontSize: 14, color: DARK_TEXT_SECONDARY }}>{event.dateLabel}</span>
         </div>
         <button style={{
@@ -887,7 +887,7 @@ const FeaturedEventCard = memo(({ event, onClick }) => {
           padding: '14px',
           borderRadius: 12,
           border: 'none',
-          background: CORAL,
+          background: ACCENT,
           color: DARK_TEXT,
           fontSize: 15,
           fontWeight: 700,
@@ -927,7 +927,7 @@ const CompactEventCard = memo(({ event, onClick, delay = 0 }) => {
         background: DARK_CARD,
         borderRadius: 16,
         overflow: 'hidden',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+        boxShadow: SHADOW_CARD_HOVER,
         transform: isVisible ? 'translateY(0)' : 'translateY(15px)',
         opacity: isVisible ? 1 : 0,
         transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -936,7 +936,7 @@ const CompactEventCard = memo(({ event, onClick, delay = 0 }) => {
     >
       <div style={{ position: 'relative', height: 100 }}>
         <img
-          src={event.img}
+          src={getEventCover(event)}
           alt={event.title}
           loading="lazy"
           decoding="async"
@@ -946,7 +946,7 @@ const CompactEventCard = memo(({ event, onClick, delay = 0 }) => {
           position: 'absolute',
           bottom: 8,
           left: 8,
-          background: 'rgba(0,0,0,0.6)',
+          background: OVERLAY_DARK,
           backdropFilter: 'blur(4px)',
           padding: '4px 8px',
           borderRadius: 8,
@@ -1016,7 +1016,7 @@ const EventCardWithAttendees = memo(({ event, onClick, delay = 0 }) => {
         flexShrink: 0,
       }}>
         <img
-          src={event.img}
+          src={getEventCover(event)}
           alt={event.title}
           loading="lazy"
           decoding="async"
@@ -1123,7 +1123,7 @@ const SectionHeader = memo(({ title, onSeeAll, delay = 0 }) => {
           style={{
             fontSize: 14,
             fontWeight: 600,
-            color: CORAL,
+            color: ACCENT,
             background: 'none',
             border: 'none',
             cursor: 'pointer',
@@ -1133,7 +1133,7 @@ const SectionHeader = memo(({ title, onSeeAll, delay = 0 }) => {
           }}
         >
           See all
-          <Icon name="chevronRight" size={14} color={CORAL} />
+          <Icon name="chevronRight" size={14} color={ACCENT} />
         </button>
       )}
     </div>
@@ -1177,7 +1177,7 @@ const OurStorySection = memo(() => {
         padding: 28,
         marginTop: 32,
         marginBottom: 32,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+        boxShadow: SHADOW_CARD_HOVER,
         transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
         opacity: isVisible ? 1 : 0,
         transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -1267,11 +1267,12 @@ const HomeScreen = memo(({
   // Categories for pill buttons
   const categories = ['All', 'Music', 'Food', 'Sports', 'Markets', 'Nightlife', 'Arts', 'Community'];
 
-  // Get featured event (first upcoming)
-  const featuredEvent = useMemo(() => {
+  // Get featured events (upcoming, horizontally scrollable)
+  const featuredEvents = useMemo(() => {
     return events
       .filter(e => e.status !== 'removed' && new Date(e.start) > new Date())
-      .sort((a, b) => new Date(a.start) - new Date(b.start))[0];
+      .sort((a, b) => new Date(a.start) - new Date(b.start))
+      .slice(0, 6);
   }, [events]);
 
   // Get events near you (up to 3)
@@ -1333,7 +1334,7 @@ const HomeScreen = memo(({
         borderRadius: 16,
         padding: '14px 18px',
         marginBottom: 28,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+        boxShadow: SHADOW_CARD_HOVER,
         animation: 'fadeInUp 0.5s ease 0.2s both',
       }}>
         <Icon name="search" size={20} color={DARK_TEXT_SECONDARY} />
@@ -1351,7 +1352,7 @@ const HomeScreen = memo(({
           }}
         />
         <button style={{
-          background: CORAL_LIGHT,
+          background: ACCENT_LIGHT,
           border: 'none',
           borderRadius: 10,
           padding: '8px',
@@ -1360,15 +1361,34 @@ const HomeScreen = memo(({
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          <Icon name="filter" size={18} color={CORAL} />
+          <Icon name="filter" size={18} color={ACCENT} />
         </button>
       </div>
 
-      {/* Featured/Trending Event */}
-      {featuredEvent && (
+      {/* Featured Events — horizontally scrollable */}
+      {featuredEvents.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <SectionHeader title="Featured Event" delay={300} />
-          <FeaturedEventCard event={featuredEvent} onClick={onEventClick} />
+          <SectionHeader title="Featured Events" onSeeAll={onSeeAllClick} delay={300} />
+          <div style={{
+            display: 'flex',
+            gap: 12,
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            paddingLeft: 20,
+            paddingRight: 20,
+            paddingBottom: 8,
+            WebkitOverflowScrolling: 'touch',
+          }}>
+            {featuredEvents.map((event, index) => (
+              <CompactEventCard
+                key={event.id}
+                event={event}
+                onClick={onEventClick}
+                delay={400 + (index * 80)}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -1548,7 +1568,7 @@ const LocationPickerModal = memo(({
         position: 'fixed',
         inset: 0,
         zIndex: 300,
-        background: 'rgba(0,0,0,0.5)',
+        background: OVERLAY_DARK,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-end',
@@ -1678,7 +1698,7 @@ const LocationPickerModal = memo(({
             )}
 
             {permissionError && (
-              <div style={{ marginTop: 16, padding: 12, background: '#FEE2E2', borderRadius: 8 }}>
+              <div style={{ marginTop: 16, padding: 12, background: ERROR_LIGHT, borderRadius: 8 }}>
                 <p style={{ margin: 0, fontSize: 13, color: ACCENT }}>{permissionError}</p>
               </div>
             )}
@@ -1936,7 +1956,7 @@ const CalendarEventCard = memo(({ event, onClick, animationDelay = 0 }) => {
         padding: '12px',
         background: WHITE,
         borderRadius: 12,
-        boxShadow: isPressed ? '0 0 0 1px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.04)' : SHADOW_CARD,
+        boxShadow: isPressed ? SHADOW_SM : SHADOW_CARD,
         transform: isPressed ? 'scale(0.97)' : isVisible ? 'scale(1)' : 'scale(0.97)',
         opacity: isVisible ? 1 : 0,
         transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -1946,7 +1966,7 @@ const CalendarEventCard = memo(({ event, onClick, animationDelay = 0 }) => {
       {/* Event Image */}
       <div style={{ width: 80, height: 80, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
         <img
-          src={imgError ? `https://picsum.photos/seed/${event.id}/200/200` : event.img}
+          src={getEventCover(event)}
           alt={event.title}
           loading="lazy"
           decoding="async"
@@ -2269,7 +2289,7 @@ const CalendarScreen = memo(({
                         {dayEvents.slice(0, 3).map((event, idx) => (
                           <img
                             key={event.id}
-                            src={event.img}
+                            src={getEventCover(event)}
                             alt=""
                             loading="lazy"
                             decoding="async"
@@ -2437,7 +2457,7 @@ const BottomNav = ({ activeTab, onTabChange }) => {
           WebkitBackdropFilter: 'blur(20px)',
           borderRadius: 999,
           padding: '6px 8px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2)',
+          boxShadow: SHADOW_CARD_HOVER,
           maxWidth: 380,
           width: '100%',
         }}>
@@ -2552,7 +2572,7 @@ const MyEventsScreen = ({ events, businessId, onBack, onCreate, onEdit, onDelete
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              boxShadow: SHADOW_SM,
               transition: 'transform 0.15s ease',
             }}
             onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
@@ -2613,7 +2633,7 @@ const MyEventsScreen = ({ events, businessId, onBack, onCreate, onEdit, onDelete
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                boxShadow: activeFilter === filter.id ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
+                boxShadow: activeFilter === filter.id ? 'none' : SHADOW_SM,
                 transform: 'scale(1)',
                 transition: 'transform 0.15s ease',
               }}
@@ -3382,13 +3402,13 @@ export default function App() {
           {notification && (
             <div
               style={{
-                background: notification.type === 'error' ? '#EA4335' : '#34A853',
+                background: notification.type === 'error' ? ERROR : SUCCESS,
                 color: WHITE,
                 padding: '12px 20px',
                 borderRadius: 12,
                 fontSize: 14,
                 fontWeight: 600,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                boxShadow: SHADOW_BUTTON,
                 animation: 'fadeInDown 0.3s ease',
               }}
             >

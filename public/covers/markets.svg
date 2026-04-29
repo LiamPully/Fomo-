@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8783A"/>
+      <stop offset="50%" stop-color="#D4652A"/>
+      <stop offset="100%" stop-color="#A34D1F"/>
+    </linearGradient>
+    <pattern id="grid" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+      <rect width="50" height="50" fill="none" stroke="#FFF" stroke-width="0.5" opacity="0.08"/>
+      <circle cx="25" cy="25" r="3" fill="#FFF" opacity="0.06"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#g)"/>
+  <rect width="800" height="500" fill="url(#grid)"/>
+  <polygon points="400,160 520,340 280,340" fill="#FFF" opacity="0.05"/>
+  <polygon points="400,190 480,330 320,330" fill="#FFF" opacity="0.07"/>
+</svg>
