@@ -308,7 +308,7 @@ const StatsRow = ({ attended, upcoming, favorites, memberSince }) => (
 );
 
 // My Events Tabs
-const MyEventsSection = ({ events, onEventClick }) => {
+const MyEventsSection = ({ events, onEventClick, onCreateEvent }) => {
   const [activeTab, setActiveTab] = useState("upcoming");
 
   const upcomingEvents = useMemo(
@@ -339,19 +339,91 @@ const MyEventsSection = ({ events, onEventClick }) => {
 
   return (
     <div style={{ marginBottom: 28 }}>
-      <h2
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <h2
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: GRAY,
+            textTransform: "uppercase",
+            letterSpacing: "0.8px",
+            fontFamily: FONT,
+            margin: 0,
+          }}
+        >
+          My Events
+        </h2>
+        <button
+          onClick={onCreateEvent}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "6px 12px",
+            borderRadius: 8,
+            border: "none",
+            background: ACCENT,
+            color: WHITE,
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: FONT,
+            cursor: "pointer",
+          }}
+        >
+          <Icon name="plus" size={14} color={WHITE} />
+          Add Event
+        </button>
+      </div>
+
+      {/* Add Event Card */}
+      <button
+        onClick={onCreateEvent}
         style={{
-          fontSize: 12,
-          fontWeight: 600,
-          color: GRAY,
-          textTransform: "uppercase",
-          letterSpacing: "0.8px",
-          marginBottom: 14,
-          fontFamily: FONT,
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: 14,
+          background: WHITE,
+          borderRadius: 12,
+          border: `1.5px dashed ${ACCENT}`,
+          textAlign: "left",
+          cursor: "pointer",
+          marginBottom: 16,
         }}
       >
-        My Events
-      </h2>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: `${ACCENT}15`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <Icon name="plus" size={20} color={ACCENT} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <p
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: BLACK,
+              margin: "0 0 2px 0",
+              fontFamily: FONT,
+            }}
+          >
+            Add New Event
+          </p>
+          <p style={{ fontSize: 12, color: GRAY, margin: 0, fontFamily: FONT }}>
+            Create and publish an event
+          </p>
+        </div>
+        <Icon name="chevron" size={16} color={GRAY} />
+      </button>
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -760,7 +832,7 @@ const AccountScreen = ({
         />
 
         {/* My Events Section */}
-        <MyEventsSection events={events} onEventClick={onManageEvents} />
+        <MyEventsSection events={events} onEventClick={onManageEvents} onCreateEvent={onCreateEvent} />
 
         {/* Account Section */}
         <SectionTitle>Account</SectionTitle>
