@@ -28,10 +28,20 @@ export const LIGHT_THEME = {
   black: '#1A1A1A',
   border: 'rgba(0,0,0,0.08)',
 
-  // Success/Status
+  // Status / semantic colors
   success: '#4ADE80',
+  successLight: '#D1FAE5',
+  error: '#DC2626',
+  errorLight: '#FEE2E2',
+  warning: '#D97706',
+  warningLight: '#FEF3C7',
+
+  // Overlays
+  overlayLight: 'rgba(0,0,0,0.4)',
+  overlayDark: 'rgba(0,0,0,0.7)',
 
   // Shadows (Airbnb-inspired three-layer system)
+  shadowSm: '0 1px 3px rgba(0,0,0,0.08)',
   shadowCard: '0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.1)',
   shadowCardHover: '0 0 0 1px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.12)',
   shadowButton: '0 4px 12px rgba(0,0,0,0.08)',
@@ -105,10 +115,21 @@ export const GRAY_MEDIUM = LIGHT_THEME.textMuted;
 export const ACCENT = LIGHT_THEME.accent;
 export const ACCENT_LIGHT = LIGHT_THEME.accentLight;
 export const FONT = LIGHT_THEME.fontFamily;
+export const SHADOW_SM = LIGHT_THEME.shadowSm;
 export const SHADOW_CARD = LIGHT_THEME.shadowCard;
 export const SHADOW_CARD_HOVER = LIGHT_THEME.shadowCardHover;
 export const SHADOW_BUTTON = LIGHT_THEME.shadowButton;
 export const SHADOW_NAV = LIGHT_THEME.shadowNav;
+
+// Semantic status exports
+export const SUCCESS = LIGHT_THEME.success;
+export const SUCCESS_LIGHT = LIGHT_THEME.successLight;
+export const ERROR = LIGHT_THEME.error;
+export const ERROR_LIGHT = LIGHT_THEME.errorLight;
+export const WARNING = LIGHT_THEME.warning;
+export const WARNING_LIGHT = LIGHT_THEME.warningLight;
+export const OVERLAY_LIGHT = LIGHT_THEME.overlayLight;
+export const OVERLAY_DARK = LIGHT_THEME.overlayDark;
 
 // ============================================
 // HELPER FUNCTIONS
@@ -156,27 +177,8 @@ export const getUserFirstName = (user) => {
  * @returns {Object} Attendee count and avatars
  */
 export const generateAttendeeData = (eventId) => {
-  if (!eventId) {
-    return { attendeeCount: 0, attendeeAvatars: [], isAttending: false };
-  }
-
-  // Use event ID to create a consistent seed
-  const seed = eventId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const baseCount = (seed % 45) + 5; // 5-50 attendees
-  const displayCount = Math.floor(baseCount / 5) * 5; // Round to nearest 5
-
-  // Generate 3-5 avatar URLs for the avatar stack
-  const avatarCount = Math.min(3, Math.floor((seed % 3) + 2));
-  const avatars = [];
-  for (let i = 0; i < avatarCount; i++) {
-    avatars.push(`https://i.pravatar.cc/150?img=${(seed + i) % 70}`);
-  }
-
-  return {
-    attendeeCount: displayCount,
-    attendeeAvatars: avatars,
-    isAttending: false
-  };
+  // TODO: Replace with real attendee data from backend when available
+  return { attendeeCount: 0, attendeeAvatars: [], isAttending: false };
 };
 
 // Default export for convenience

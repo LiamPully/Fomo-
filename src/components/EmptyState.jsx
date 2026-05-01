@@ -1,12 +1,5 @@
 import { memo } from 'react';
-
-// Airbnb-Inspired Empty States with emoji illustrations
-const BG = '#F8F9FA';
-const BLACK = '#1A1A1A';
-const GRAY = '#5F6368';
-const ACCENT = '#E85D3F';
-const GRAY_LIGHT = '#F1F3F4';
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+import { BG, BLACK, GRAY, GRAY_LIGHT, ACCENT, FONT, SHADOW_CARD, ERROR_LIGHT } from '../lib/theme';
 
 /**
  * EmptyState - Reusable empty state component with illustration
@@ -36,7 +29,7 @@ const EmptyState = memo(({
       emoji: '📅',
     },
     error: {
-      bg: '#FEE2E2',
+      bg: ERROR_LIGHT,
       iconSize: 80,
       emoji: '⚠️',
     },
@@ -73,7 +66,7 @@ const EmptyState = memo(({
           justifyContent: 'center',
           marginBottom: 20,
           fontSize: 40,
-          boxShadow: '0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.1)',
+          boxShadow: SHADOW_CARD,
         }}
       >
         {icon || style.emoji}
@@ -123,7 +116,7 @@ const EmptyState = memo(({
             cursor: 'pointer',
             fontFamily: FONT,
             transition: 'transform 0.15s ease, box-shadow 0.25s ease',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: SHADOW_BUTTON,
           }}
           onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.96)'}
           onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}

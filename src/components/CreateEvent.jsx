@@ -7,21 +7,11 @@ import {
   revokePreviewUrl,
   getFileInfo,
 } from "../api/storage";
+import {
+  BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ACCENT_LIGHT, FONT,
+  SHADOW_CARD, SHADOW_CARD_HOVER, SHADOW_BUTTON, OVERLAY_DARK, ERROR, ERROR_LIGHT,
+} from "../lib/theme";
 import "../styles/airbnb-inspired.css";
-
-// Airbnb-Inspired Design Tokens
-const BG = "#F8F9FA";
-const WHITE = "#FFFFFF";
-const BLACK = "#1A1A1A";
-const GRAY = "#5F6368";
-const GRAY_LIGHT = "#F1F3F4";
-const GRAY_MEDIUM = "#80868B";
-const ACCENT = "#E85D3F";
-const ACCENT_LIGHT = "#FFF5F2";
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-
-const SHADOW_CARD = "0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.1)";
-const SHADOW_CARD_HOVER = "0 0 0 1px rgba(0,0,0,0.03), 0 4px 12px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.12)";
 
 // Icon component
 const Icon = ({ name, size = 20, color = BLACK }) => {
@@ -144,7 +134,7 @@ const StepIndicator = memo(({ currentStep, totalSteps, stepLabels }) => {
 StepIndicator.displayName = "StepIndicator";
 
 // Form input components
-const FormInput = memo(({ inputRef, type = "text", placeholder, hasError, disabled = false, defaultValue = "" }) => {
+const FormInput = memo(({ inputRef, type = "text", placeholder, hasError, disabled = false, defaultValue = "", onBlur: externalOnBlur }) => {
   return (
     <input
       ref={inputRef}
@@ -175,6 +165,7 @@ const FormInput = memo(({ inputRef, type = "text", placeholder, hasError, disabl
       onBlur={(e) => {
         e.target.style.borderColor = hasError ? ACCENT : GRAY_LIGHT;
         e.target.style.boxShadow = "none";
+        if (externalOnBlur) externalOnBlur(e);
       }}
     />
   );
@@ -281,7 +272,7 @@ const CategoryButton = memo(({ label, isActive, color, onClick }) => {
         fontFamily: FONT,
         transform: isPressed ? "scale(0.95)" : "scale(1)",
         transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
-        boxShadow: isActive ? "0 4px 12px rgba(0,0,0,0.15)" : SHADOW_CARD,
+        boxShadow: isActive ? SHADOW_BUTTON : SHADOW_CARD,
       }}
     >
       {label}
@@ -524,7 +515,7 @@ const ImageUploader = memo(({ onImagesChange, disabled = false, existingImages =
                     width: 26,
                     height: 26,
                     borderRadius: "50%",
-                    background: "rgba(0,0,0,0.7)",
+                    background: OVERLAY_DARK,
                     border: "none",
                     cursor: disabled ? "not-allowed" : "pointer",
                     display: "flex",
@@ -544,7 +535,7 @@ const ImageUploader = memo(({ onImagesChange, disabled = false, existingImages =
                     position: "absolute",
                     bottom: 6,
                     left: 6,
-                    background: "rgba(0,0,0,0.6)",
+                    background: OVERLAY_DARK,
                     color: WHITE,
                     fontSize: 11,
                     fontWeight: 600,
@@ -596,7 +587,7 @@ const ImageUploader = memo(({ onImagesChange, disabled = false, existingImages =
           style={{
             marginTop: 12,
             padding: "12px 14px",
-            background: "#FEE2E2",
+            background: ERROR_LIGHT,
             borderRadius: 10,
           }}
         >
@@ -606,7 +597,7 @@ const ImageUploader = memo(({ onImagesChange, disabled = false, existingImages =
               style={{
                 fontFamily: FONT,
                 fontSize: 13,
-                color: "#EA4335",
+                color: ERROR,
                 margin: i === 0 ? 0 : "4px 0 0",
               }}
             >
@@ -780,18 +771,18 @@ const NavigationButtons = ({ onBack, onNext, onPublish, onSaveDraft, isSubmittin
             fontFamily: FONT,
             opacity: isSubmitting ? 0.7 : 1,
             transition: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            boxShadow: SHADOW_BUTTON,
           }}
           onMouseDown={(e) =>
             !isSubmitting && (e.currentTarget.style.transform = "scale(0.96)")
           }
           onMouseUp={(e) => {
             e.currentTarget.style.transform = "scale(1)";
-            e.currentTarget.style.boxShadow = "0 6px 16px rgba(0,0,0,0.2)";
+            e.currentTarget.style.boxShadow = SHADOW_CARD_HOVER;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = "scale(1)";
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+            e.currentTarget.style.boxShadow = SHADOW_BUTTON;
           }}
         >
           Continue
@@ -1421,7 +1412,7 @@ const CreateEvent = ({ user, onSave, onBack }) => {
                   position: "absolute",
                   top: 12,
                   right: 12,
-                  background: "rgba(0,0,0,0.7)",
+                  background: OVERLAY_DARK,
                   color: WHITE,
                   padding: "6px 12px",
                   borderRadius: 20,
@@ -1665,7 +1656,7 @@ const CreateEvent = ({ user, onSave, onBack }) => {
         {errors.submit && (
           <div
             style={{
-              background: "#FEE2E2",
+              background: ERROR_LIGHT,
               borderRadius: 12,
               padding: "14px 16px",
               marginBottom: 16,
@@ -1675,7 +1666,7 @@ const CreateEvent = ({ user, onSave, onBack }) => {
               style={{
                 fontFamily: FONT,
                 fontSize: 14,
-                color: "#EA4335",
+                color: ERROR,
                 margin: 0,
               }}
             >

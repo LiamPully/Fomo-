@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useRateLimit } from './useRateLimit';
+import { safeLog } from '../lib/security';
 
 // Storage keys
 const AUTH_STORAGE_KEY = 'fomoza_auth_session';
 const AUTH_PERSISTENT_KEY = 'fomoza_auth_persistent';
-const TOKEN_EXPIRY_DAYS = 30;
-
 // Storage helpers
 const storage = {
   local: {
@@ -63,10 +62,17 @@ const storage = {
 const saveSession = (session, keepSignedIn) => {
   if (!session) return;
 
+  // Clear opposing storage first to prevent stale sessions
+  clearAllAuthStorage();
+
+  const expiresAtMs = session.expires_at
+    ? session.expires_at * 1000
+    : Date.now() + 3600 * 1000;
+
   const sessionData = {
     access_token: session.access_token,
     refresh_token: session.refresh_token,
-    expires_at: Date.now() + (TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000),
+    expires_at: expiresAtMs,
     user: session.user,
   };
 
@@ -118,20 +124,17 @@ const validateEmail = (email) => {
 
 const validatePassword = (password) => {
   const errors = [];
-  if (password.length < 6) {
-    errors.push('Password must be at least 6 characters');
+  if (!password || password.length < 8) {
+    errors.push('Password must be at least 8 characters');
   }
-  if (password.length >= 8) {
-    // Only enforce additional rules for 8+ char passwords
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
-    }
-    if (!/[a-z]/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
-    }
-    if (!/[0-9]/.test(password)) {
-      errors.push('Password must contain at least one number');
-    }
+  if (password && !/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  if (password && !/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  if (password && !/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
   }
   return errors;
 };
@@ -190,6 +193,22 @@ export function useAuth() {
     recordAttempt: recordSignInAttempt
   } = useRateLimit(5, 60000);
 
+  // Rate limiting for sign up (3 attempts per minute)
+  const {
+    isRateLimited: isSignUpRateLimited,
+    remainingTime: signUpRemainingTime,
+    checkRateLimit: checkSignUpRateLimit,
+    recordAttempt: recordSignUpAttempt
+  } = useRateLimit(3, 60000);
+
+  // Rate limiting for password reset (3 attempts per 5 minutes)
+  const {
+    isRateLimited: isResetRateLimited,
+    remainingTime: resetRemainingTime,
+    checkRateLimit: checkResetRateLimit,
+    recordAttempt: recordResetAttempt
+  } = useRateLimit(3, 300000);
+
   // Fetch business profile for current user with improved retry logic
   const fetchBusiness = useCallback(async (userId, maxRetries = 5) => {
     if (!userId) return null;
@@ -207,7 +226,7 @@ export function useAuth() {
           if (error.code === 'PGRST116') {
             return null;
           }
-          console.error('Error fetching business:', error);
+          safeLog.error('Error fetching business:', error);
           return null;
         }
 
@@ -221,12 +240,12 @@ export function useAuth() {
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       } catch (err) {
-        console.error('Error fetching business:', err);
+        safeLog.error('Error fetching business:', err);
         return null;
       }
     }
 
-    console.warn('Business record not found after retries');
+    safeLog.warn('Business record not found after retries');
     return null;
   }, []);
 
@@ -245,12 +264,38 @@ export function useAuth() {
 
       return session;
     } catch (err) {
-      console.error('Session refresh error:', err);
+      safeLog.error('Session refresh error:', err);
       setUser(null);
       setBusiness(null);
       return null;
     }
   }, []);
+
+  // Send password reset email
+  const sendPasswordReset = useCallback(async (email) => {
+    setError(null);
+
+    // Check rate limiting
+    if (isResetRateLimited) {
+      const errorMsg = `Too many password reset attempts. Please try again in ${resetRemainingTime} seconds.`;
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
+    recordResetAttempt();
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      if (error) throw error;
+      return { success: true, error: null };
+    } catch (err) {
+      const sanitized = sanitizeError(err);
+      setError(sanitized);
+      return { success: false, error: sanitized };
+    }
+  }, [isResetRateLimited, resetRemainingTime, recordResetAttempt]);
 
   // Create business profile manually (fallback if trigger fails)
   const createBusinessProfile = useCallback(async (userId, businessName) => {
@@ -268,12 +313,12 @@ export function useAuth() {
         .single();
 
       if (error) {
-        console.error('Failed to create business profile:', error);
+        safeLog.error('Failed to create business profile:', error);
         return null;
       }
       return data;
     } catch (err) {
-      console.error('Exception creating business profile:', err);
+      safeLog.error('Exception creating business profile:', err);
       return null;
     }
   }, []);
@@ -297,6 +342,24 @@ export function useAuth() {
     } = registrationData;
 
     setError(null);
+
+    // Check rate limiting for sign up
+    if (isSignUpRateLimited) {
+      const errorMsg = `Too many sign up attempts. Please try again in ${signUpRemainingTime} seconds.`;
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
+    // Validate password strength before sending to Supabase
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      const errorMsg = passwordErrors.join('. ');
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
+    // Record sign-up attempt
+    recordSignUpAttempt();
 
     try {
       // Create auth user with extended metadata
@@ -354,7 +417,7 @@ export function useAuth() {
       setError(sanitized);
       return { success: false, error: sanitized };
     }
-  }, [fetchBusiness, createBusinessProfile]);
+  }, [fetchBusiness, createBusinessProfile, isSignUpRateLimited, signUpRemainingTime, recordSignUpAttempt]);
 
   // Sign in with email/password
   const signIn = useCallback(async (email, password, keepSignedIn = false) => {
@@ -479,7 +542,7 @@ export function useAuth() {
           setBusiness(businessData);
         }
       } catch (err) {
-        console.error('Session check error:', err);
+        safeLog.error('Session check error:', err);
         // Clear invalid stored sessions
         clearAllAuthStorage();
       } finally {
@@ -488,6 +551,26 @@ export function useAuth() {
     };
 
     checkSession();
+
+    // Periodic session validation every 5 minutes
+    const validationInterval = setInterval(async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          const stored = getStoredSession();
+          if (stored) {
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError || !refreshData.session) {
+              clearAllAuthStorage();
+              setUser(null);
+              setBusiness(null);
+            }
+          }
+        }
+      } catch (err) {
+        safeLog.error('Periodic session validation error:', err);
+      }
+    }, 5 * 60 * 1000);
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -531,6 +614,7 @@ export function useAuth() {
     );
 
     return () => {
+      clearInterval(validationInterval);
       subscription.unsubscribe();
     };
   }, [fetchBusiness, refreshSession, createBusinessProfile]);
@@ -560,6 +644,7 @@ export function useAuth() {
     signUp,
     signIn,
     signOut,
+    sendPasswordReset,
     refreshBusiness,
     refreshSession,
     createBusinessProfile,

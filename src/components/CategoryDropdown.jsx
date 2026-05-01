@@ -1,10 +1,5 @@
 import { useEffect, useRef } from 'react';
-
-const FONT = "'Sora', system-ui, sans-serif";
-const BLACK = '#111111';
-const WHITE = '#FFFFFF';
-const GRAY2 = '#E4E1DA';
-const GRAY3 = '#F7F5F1';
+import { BLACK, WHITE, GRAY_LIGHT, GRAY_MEDIUM, FONT, SHADOW_CARD } from '../lib/theme';
 
 // Additional categories shown in "Other" dropdown
 const ADDITIONAL_CATEGORIES = [
@@ -59,8 +54,8 @@ export const CategoryDropdown = ({ isOpen, onClose, onSelect, selectedCategory }
         padding: '16px',
         marginTop: 8,
         marginBottom: 16,
-        border: `1px solid ${GRAY2}`,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        border: `1px solid ${GRAY_LIGHT}`,
+        boxShadow: SHADOW_CARD,
         maxHeight: '400px',
         overflowY: 'auto',
       }}
@@ -72,7 +67,7 @@ export const CategoryDropdown = ({ isOpen, onClose, onSelect, selectedCategory }
             fontFamily: FONT,
             fontSize: 12,
             fontWeight: 600,
-            color: '#888880',
+            color: GRAY_MEDIUM,
             marginBottom: 12,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
@@ -86,7 +81,7 @@ export const CategoryDropdown = ({ isOpen, onClose, onSelect, selectedCategory }
               key={cat.id}
               onClick={() => onSelect(cat.id)}
               style={{
-                background: selectedCategory === cat.id ? cat.color : GRAY3,
+                background: selectedCategory === cat.id ? cat.color : WHITE,
                 color: selectedCategory === cat.id ? WHITE : BLACK,
                 border: 'none',
                 borderRadius: 999,
@@ -112,7 +107,7 @@ export const CategoryDropdown = ({ isOpen, onClose, onSelect, selectedCategory }
             fontFamily: FONT,
             fontSize: 12,
             fontWeight: 600,
-            color: '#888880',
+            color: GRAY_MEDIUM,
             marginBottom: 12,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
@@ -126,7 +121,7 @@ export const CategoryDropdown = ({ isOpen, onClose, onSelect, selectedCategory }
               key={cat.id}
               onClick={() => onSelect(cat.id)}
               style={{
-                background: selectedCategory === cat.id ? cat.color : GRAY3,
+                background: selectedCategory === cat.id ? cat.color : WHITE,
                 color: selectedCategory === cat.id ? WHITE : BLACK,
                 border: 'none',
                 borderRadius: 999,

@@ -1,5 +1,6 @@
 import { memo, useRef, useCallback, useState, useEffect } from 'react';
-import '../styles/design-system.css';
+import { BLACK, WHITE, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, FONT } from '../lib/theme';
+import '../styles/airbnb-inspired.css';
 
 /**
  * StableInput - A bulletproof input component that prevents mobile keyboard issues
@@ -22,12 +23,6 @@ import '../styles/design-system.css';
  *   validate={(value) => value.includes('@')}
  * />
  */
-
-const GRAY2 = '#E4E1DA';
-const GRAY3 = '#F7F5F1';
-const BLACK = '#111111';
-const ORANGE = '#E8783A';
-const FONT = "'Sora', system-ui, sans-serif";
 
 // The actual input component - completely isolated from parent renders
 const InputCore = memo(({
@@ -81,23 +76,23 @@ const InputCore = memo(({
         onFocus={handleFocus}
         style={{
           width: '100%',
-          border: `1.5px solid ${hasError ? ORANGE : GRAY2}`,
+          border: `1.5px solid ${hasError ? ACCENT : GRAY_LIGHT}`,
           borderRadius: 14,
           padding: '13px 16px',
           fontSize: 16,
           outline: 'none',
           fontFamily: FONT,
           boxSizing: 'border-box',
-          background: GRAY3,
+          background: WHITE,
           WebkitAppearance: 'none',
           touchAction: 'manipulation',
           transition: 'border-color 0.15s ease',
         }}
         onMouseEnter={(e) => {
-          if (!hasError) e.target.style.borderColor = '#D0CDC6';
+          if (!hasError) e.target.style.borderColor = GRAY_MEDIUM;
         }}
         onMouseLeave={(e) => {
-          if (!hasError) e.target.style.borderColor = GRAY2;
+          if (!hasError) e.target.style.borderColor = GRAY_LIGHT;
         }}
       />
     </div>
@@ -178,7 +173,7 @@ const StableInput = ({
       />
       {error && (
         <div style={{
-          color: ORANGE,
+          color: ACCENT,
           fontSize: 12,
           marginTop: 6,
           fontFamily: FONT,
@@ -267,12 +262,12 @@ export const StableTextarea = memo(({
       onChange={handleChange}
       style={{
         width: '100%',
-        border: `1.5px solid ${hasError ? ORANGE : GRAY2}`,
+        border: `1.5px solid ${hasError ? ACCENT : GRAY_LIGHT}`,
         borderRadius: 12,
         padding: '12px 14px',
         fontSize: 14,
         outline: 'none',
-        background: GRAY3,
+        background: WHITE,
         fontFamily: FONT,
         resize: 'vertical',
         boxSizing: 'border-box',
@@ -282,10 +277,10 @@ export const StableTextarea = memo(({
         transition: 'border-color 0.15s ease',
       }}
       onMouseEnter={(e) => {
-        if (!hasError) e.target.style.borderColor = '#D0CDC6';
+        if (!hasError) e.target.style.borderColor = GRAY_MEDIUM;
       }}
       onMouseLeave={(e) => {
-        if (!hasError) e.target.style.borderColor = GRAY2;
+        if (!hasError) e.target.style.borderColor = GRAY_LIGHT;
       }}
     />
   );

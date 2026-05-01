@@ -1,4 +1,4 @@
-const ORANGE = '#E8783A';
+import { ACCENT } from '../lib/theme';
 
 export const LoadingSpinner = ({ size = 40 }) => {
   return (
@@ -14,8 +14,8 @@ export const LoadingSpinner = ({ size = 40 }) => {
         style={{
           width: size,
           height: size,
-          border: `3px solid ${ORANGE}20`,
-          borderTop: `3px solid ${ORANGE}`,
+          border: `3px solid ${ACCENT}20`,
+          borderTop: `3px solid ${ACCENT}`,
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
         }}

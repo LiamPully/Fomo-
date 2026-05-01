@@ -1,17 +1,10 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
-import "../styles/modern-design.css";
-
-// Airbnb Design Tokens
-const BG = "#F8F9FA";
-const WHITE = "#FFFFFF";
-const BLACK = "#1A1A1A";
-const GRAY = "#5F6368";
-const GRAY_LIGHT = "#F1F3F4";
-const GRAY_MEDIUM = "#80868B";
-const ACCENT = "#E85D3F";
-const ACCENT_LIGHT = "#FFF5F2";
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+import {
+  BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ACCENT_LIGHT, FONT,
+  SHADOW_CARD, OVERLAY_DARK, ERROR, ERROR_LIGHT,
+} from "../lib/theme";
+import "../styles/airbnb-inspired.css";
 
 // Optimistic update - closes immediately, syncs in background
 const EditProfileModal = ({ open, onClose, user, onProfileUpdated }) => {
@@ -137,7 +130,7 @@ const EditProfileModal = ({ open, onClose, user, onProfileUpdated }) => {
         position: "fixed",
         inset: 0,
         zIndex: 300,
-        background: "rgba(0,0,0,0.5)",
+        background: OVERLAY_DARK,
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-end",
@@ -175,8 +168,8 @@ const EditProfileModal = ({ open, onClose, user, onProfileUpdated }) => {
         </p>
 
         {error && (
-          <div style={{ background: "#FEE2E2", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
-            <p style={{ fontFamily: FONT, fontSize: 14, color: "#EA4335", margin: 0 }}>{error}</p>
+          <div style={{ background: ERROR_LIGHT, borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+            <p style={{ fontFamily: FONT, fontSize: 14, color: ERROR, margin: 0 }}>{error}</p>
           </div>
         )}
 
@@ -309,7 +302,7 @@ const EditProfileModal = ({ open, onClose, user, onProfileUpdated }) => {
           bottom: 20,
           left: "50%",
           transform: "translateX(-50%)",
-          background: "rgba(0,0,0,0.8)",
+          background: OVERLAY_DARK,
           color: WHITE,
           padding: "10px 20px",
           borderRadius: 20,

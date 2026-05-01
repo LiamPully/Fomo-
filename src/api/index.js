@@ -12,6 +12,12 @@ export {
   deleteEvent,
   fetchBusinessEvents,
   searchEvents,
+  // Saved Events
+  toggleSaveEvent,
+  fetchSavedEvents,
+  isEventSaved,
+  // Categories
+  fetchCategories,
 } from './events';
 
 // Storage API
@@ -28,3 +34,13 @@ export {
   initializeStorage,
   getImageUrl,
 } from './storage';
+
+// Businesses API
+export {
+  getOrCreateBusiness,
+  getMyBusiness,
+  getBusiness,
+  updateBusiness,
+  incrementEventCount,
+  canPublishEvent,
+} from './businesses';

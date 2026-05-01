@@ -1261,6 +1261,7 @@ const HomeScreen = memo(({
   onEventClick,
   onSeeAllClick,
   onSetLocation,
+  onSearchFocus,
 }) => {
   const [activeCategory, setActiveCategory] = useState('All');
 
@@ -1325,44 +1326,45 @@ const HomeScreen = memo(({
         </h1>
       </div>
 
-      {/* Search Bar with Filter */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        background: DARK_CARD,
-        borderRadius: 16,
-        padding: '14px 18px',
-        marginBottom: 28,
-        boxShadow: SHADOW_CARD_HOVER,
-        animation: 'fadeInUp 0.5s ease 0.2s both',
-      }}>
+      {/* Search Bar with Filter — tapping navigates to Search tab */}
+      <div
+        onClick={onSeeAllClick}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: DARK_CARD,
+          borderRadius: 16,
+          padding: '14px 18px',
+          marginBottom: 28,
+          boxShadow: SHADOW_CARD_HOVER,
+          animation: 'fadeInUp 0.5s ease 0.2s both',
+          cursor: 'pointer',
+        }}
+      >
         <Icon name="search" size={20} color={DARK_TEXT_SECONDARY} />
-        <input
-          type="text"
-          placeholder="Search events..."
+        <span
           style={{
             flex: 1,
-            border: 'none',
-            outline: 'none',
             fontSize: 15,
             fontFamily: FONT,
-            background: 'transparent',
-            color: DARK_TEXT,
+            color: DARK_TEXT_SECONDARY,
+            userSelect: 'none',
           }}
-        />
-        <button style={{
+        >
+          Search events...
+        </span>
+        <div style={{
           background: ACCENT_LIGHT,
           border: 'none',
           borderRadius: 10,
           padding: '8px',
-          cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
           <Icon name="filter" size={18} color={ACCENT} />
-        </button>
+        </div>
       </div>
 
       {/* Featured Events — horizontally scrollable */}
@@ -2718,12 +2720,24 @@ const MyEventsScreen = ({ events, businessId, onBack, onCreate, onEdit, onDelete
   );
 };
 
+// Favourites helpers (localStorage-backed)
+const FAVOURITES_KEY = 'fomoza_favourites';
+const loadFavourites = () => {
+  try { return new Set(JSON.parse(localStorage.getItem(FAVOURITES_KEY) || '[]')); }
+  catch { return new Set(); }
+};
+const saveFavourites = (set) => {
+  try { localStorage.setItem(FAVOURITES_KEY, JSON.stringify([...set])); }
+  catch (e) { console.warn('Failed to save favourites', e); }
+};
+
 // Main App
 export default function App() {
   const [tab, setTab] = useState("home");
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [favouriteIds, setFavouriteIds] = useState(() => loadFavourites());
   const [showLoc, setShowLoc] = useState(true);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [locLabel, setLocLabel] = useState(null);
@@ -2734,382 +2748,19 @@ export default function App() {
   const [showPrivacySettings, setShowPrivacySettings] = useState(false);
   const [showNotificationPrefs, setShowNotificationPrefs] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [notification, setNotification] = useState(null);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const [pageTransition, setPageTransition] = useState('idle');
 
   const { user, business, loading: authLoading, error: authError, signUp, signIn, signOut, refreshBusiness, clearError } = useAuth();
 
-  // Mock events for South African locations
-  const mockEvents = useMemo(() => [
-    // East London Events
-    {
-      id: 'mock-el-1',
-      title: 'East London Food & Craft Market',
-      organiser: 'Buffalo City Tourism',
-      category: 'Markets',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 2).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 09:00`,
-      start: new Date(Date.now() + 86400000 * 2).toISOString(),
-      end: new Date(Date.now() + 86400000 * 2 + 28800000).toISOString(),
-      area: 'East London',
-      location: 'Eastern Beach Promenade',
-      address: 'Eastern Beach Promenade, East London, Eastern Cape',
-      latitude: -33.0292,
-      longitude: 27.8546,
-      phone: '+27 43 705 3000',
-      whatsapp: '+27 82 555 1234',
-      website: 'https://buffalocity.gov.za',
-      instagram: '@buffalocityevents',
-      img: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=500&fit=crop',
-      desc: 'Explore the best local crafts, fresh produce, and street food from the Eastern Cape. Live music and family-friendly activities.',
-      status: 'published',
-      featured: true,
-      viewCount: 245,
-      businessId: 'mock-buffalo-city',
-      user_id: null,
-    },
-    {
-      id: 'mock-el-2',
-      title: 'Nahoon Beach Surf Competition',
-      organiser: 'East London Surf Club',
-      category: 'Sports',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 5).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 07:00`,
-      start: new Date(Date.now() + 86400000 * 5).toISOString(),
-      end: new Date(Date.now() + 86400000 * 5 + 18000000).toISOString(),
-      area: 'East London',
-      location: 'Nahoon Beach',
-      address: 'Nahoon Beach, East London, Eastern Cape',
-      latitude: -32.9917,
-      longitude: 27.9372,
-      phone: '+27 43 726 2134',
-      whatsapp: '+27 83 456 7890',
-      website: 'https://easterncapesurfing.co.za',
-      instagram: '@nahoonsurf',
-      img: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=800&h=500&fit=crop',
-      desc: 'Annual surf competition featuring top Eastern Cape surfers. Spectator-friendly with food stalls and live commentary.',
-      status: 'published',
-      featured: false,
-      viewCount: 189,
-      businessId: 'mock-surf-club',
-      user_id: null,
-    },
-    {
-      id: 'mock-el-3',
-      title: 'German Settlers Memorial Festival',
-      organiser: 'East London Heritage Foundation',
-      category: 'Community',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 7).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 10:00`,
-      start: new Date(Date.now() + 86400000 * 7).toISOString(),
-      end: new Date(Date.now() + 86400000 * 7 + 21600000).toISOString(),
-      area: 'East London',
-      location: 'German Settlers Memorial',
-      address: 'Oxford Street, East London, Eastern Cape',
-      latitude: -33.0153,
-      longitude: 27.9121,
-      phone: '+27 43 722 2404',
-      whatsapp: null,
-      website: 'https://elheritage.org.za',
-      instagram: '@elheritage',
-      img: 'https://images.unsplash.com/photo-1533174072545-7a4bc6f39b66?w=800&h=500&fit=crop',
-      desc: 'Celebrate East London\'s German heritage with traditional music, food, and cultural displays. Family-friendly event.',
-      status: 'published',
-      featured: false,
-      viewCount: 156,
-      businessId: 'mock-heritage',
-      user_id: null,
-    },
-    // Cape Town Events
-    {
-      id: 'mock-ct-1',
-      title: 'V&A Waterfront Jazz Festival',
-      organiser: 'Cape Town Jazz Events',
-      category: 'Music',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 3).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 18:00`,
-      start: new Date(Date.now() + 86400000 * 3).toISOString(),
-      end: new Date(Date.now() + 86400000 * 3 + 14400000).toISOString(),
-      area: 'Cape Town',
-      location: 'V&A Waterfront Amphitheatre',
-      address: 'V&A Waterfront, Cape Town, Western Cape',
-      latitude: -33.9056,
-      longitude: 18.4199,
-      phone: '+27 21 408 7600',
-      whatsapp: '+27 76 234 5678',
-      website: 'https://jazzfest.co.za',
-      instagram: '@capetownjazz',
-      img: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&h=500&fit=crop',
-      desc: 'World-class jazz performances featuring local and international artists. Food and wine stalls available.',
-      status: 'published',
-      featured: true,
-      viewCount: 892,
-      businessId: 'mock-jazz-events',
-      user_id: null,
-    },
-    {
-      id: 'mock-ct-2',
-      title: 'Kirstenbosch Summer Sunset Concert',
-      organiser: 'Kirstenbosch Botanical Gardens',
-      category: 'Music',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 4).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 17:30`,
-      start: new Date(Date.now() + 86400000 * 4).toISOString(),
-      end: new Date(Date.now() + 86400000 * 4 + 18000000).toISOString(),
-      area: 'Cape Town',
-      location: 'Kirstenbosch Gardens',
-      address: 'Rhodes Drive, Newlands, Cape Town, Western Cape',
-      latitude: -33.9875,
-      longitude: 18.4327,
-      phone: '+27 21 799 8780',
-      whatsapp: null,
-      website: 'https://sanbi.org/gardens/kirstenbosch',
-      instagram: '@kirstenbosch',
-      img: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800&h=500&fit=crop',
-      desc: 'Picnic concerts on the lawns of Kirstenbosch. Bring your blanket and picnic basket for an unforgettable sunset experience.',
-      status: 'published',
-      featured: true,
-      viewCount: 1023,
-      businessId: 'mock-kirstenbosch',
-      user_id: null,
-    },
-    {
-      id: 'mock-ct-3',
-      title: 'Boulders Beach Penguin Walk',
-      organiser: 'Cape Town Tourism',
-      category: 'Fun',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 6).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 08:00`,
-      start: new Date(Date.now() + 86400000 * 6).toISOString(),
-      end: new Date(Date.now() + 86400000 * 6 + 10800000).toISOString(),
-      area: 'Cape Town',
-      location: 'Boulders Beach',
-      address: 'Simon\'s Town, Cape Town, Western Cape',
-      latitude: -34.1967,
-      longitude: 18.4506,
-      phone: '+27 21 786 2329',
-      whatsapp: '+27 84 567 8901',
-      website: 'https://theboulders.co.za',
-      instagram: '@bouldersbeach',
-      img: 'https://images.unsplash.com/photo-1591123720164-de1348028a82?w=800&h=500&fit=crop',
-      desc: 'Guided morning walk among the famous African penguin colony. Learn about conservation efforts and enjoy beach time.',
-      status: 'published',
-      featured: false,
-      viewCount: 567,
-      businessId: 'mock-ct-tourism',
-      user_id: null,
-    },
-    {
-      id: 'mock-ct-4',
-      title: 'Bo-Kaap Cultural Food Tour',
-      organiser: 'Bo-Kaap Community Association',
-      category: 'Food & Drink',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 8).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 11:00`,
-      start: new Date(Date.now() + 86400000 * 8).toISOString(),
-      end: new Date(Date.now() + 86400000 * 8 + 14400000).toISOString(),
-      area: 'Cape Town',
-      location: 'Bo-Kaap',
-      address: 'Waal Street, Bo-Kaap, Cape Town, Western Cape',
-      latitude: -33.9208,
-      longitude: 18.4111,
-      phone: '+27 21 481 4125',
-      whatsapp: '+27 73 890 1234',
-      website: 'https://bokaap.co.za',
-      instagram: '@bokaapcapetown',
-      img: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=500&fit=crop',
-      desc: 'Taste authentic Cape Malay cuisine while learning about the rich cultural history of the Bo-Kaap neighbourhood.',
-      status: 'published',
-      featured: true,
-      viewCount: 445,
-      businessId: 'mock-bokaap',
-      user_id: null,
-    },
-    // George Events
-    {
-      id: 'mock-george-1',
-      title: 'Outeniqua Farmers Market',
-      organiser: 'George Tourism',
-      category: 'Markets',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 2).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 08:00`,
-      start: new Date(Date.now() + 86400000 * 2).toISOString(),
-      end: new Date(Date.now() + 86400000 * 2 + 18000000).toISOString(),
-      area: 'George',
-      location: 'Outeniqua Park',
-      address: 'Cnr of N2 and Kaaimans Bridge Road, George, Western Cape',
-      latitude: -33.9642,
-      longitude: 22.4614,
-      phone: '+27 44 801 1900',
-      whatsapp: '+27 82 123 4567',
-      website: 'https://visitgeorge.co.za',
-      instagram: '@georgegardenroute',
-      img: 'https://images.unsplash.com/photo-1488459715521-937e1e7f5843?w=800&h=500&fit=crop',
-      desc: 'Fresh Garden Route produce, local crafts, and delicious food. A Saturday tradition for locals and visitors alike.',
-      status: 'published',
-      featured: true,
-      viewCount: 334,
-      businessId: 'mock-george-tourism',
-      user_id: null,
-    },
-    {
-      id: 'mock-george-2',
-      title: 'Fancourt Golf Open Day',
-      organiser: 'Fancourt Estate',
-      category: 'Sports',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 9).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 07:00`,
-      start: new Date(Date.now() + 86400000 * 9).toISOString(),
-      end: new Date(Date.now() + 86400000 * 9 + 28800000).toISOString(),
-      area: 'George',
-      location: 'Fancourt Hotel & Country Club',
-      address: 'Montagu Street, Blanco, George, Western Cape',
-      latitude: -33.9189,
-      longitude: 22.4042,
-      phone: '+27 44 804 0000',
-      whatsapp: '+27 78 345 6789',
-      website: 'https://fancourt.co.za',
-      instagram: '@fancourtestate',
-      img: 'https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=800&h=500&fit=crop',
-      desc: 'Experience one of South Africa\'s premier golf estates. Open day includes course tours and dining experiences.',
-      status: 'published',
-      featured: true,
-      viewCount: 278,
-      businessId: 'mock-fancourt',
-      user_id: null,
-    },
-    {
-      id: 'mock-george-3',
-      title: 'Garden Route Wine Festival',
-      organiser: 'Garden Route Wine Producers',
-      category: 'Food & Drink',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 12).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 12:00`,
-      start: new Date(Date.now() + 86400000 * 12).toISOString(),
-      end: new Date(Date.now() + 86400000 * 12 + 21600000).toISOString(),
-      area: 'George',
-      location: 'George Botanical Gardens',
-      address: 'CJ Langenhoven Road, George, Western Cape',
-      latitude: -33.9583,
-      longitude: 22.4547,
-      phone: '+27 44 874 2046',
-      whatsapp: '+27 79 567 8901',
-      website: 'https://gardenroutewines.co.za',
-      instagram: '@gardenroutewine',
-      img: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=800&h=500&fit=crop',
-      desc: 'Taste the best wines from the Garden Route region. Live music, food pairings, and wine sales available.',
-      status: 'published',
-      featured: false,
-      viewCount: 412,
-      businessId: 'mock-wine-producers',
-      user_id: null,
-    },
-    // Knysna Events
-    {
-      id: 'mock-knysna-1',
-      title: 'Knysna Oyster Festival',
-      organiser: 'Knysna Tourism',
-      category: 'Food & Drink',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 10).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 10:00`,
-      start: new Date(Date.now() + 86400000 * 10).toISOString(),
-      end: new Date(Date.now() + 86400000 * 10 + 28800000).toISOString(),
-      area: 'Knysna',
-      location: 'Waterfront Drive',
-      address: 'Waterfront Drive, Knysna, Western Cape',
-      latitude: -34.0353,
-      longitude: 23.0464,
-      phone: '+27 44 382 5510',
-      whatsapp: '+27 81 234 5678',
-      website: 'https://knysnaoysterfestival.co.za',
-      instagram: '@knysnaoysterfest',
-      img: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800&h=500&fit=crop',
-      desc: 'The ultimate oyster experience! Fresh oysters, wine tasting, live entertainment, and family activities on the lagoon.',
-      status: 'published',
-      featured: true,
-      viewCount: 678,
-      businessId: 'mock-knysna-tourism',
-      user_id: null,
-    },
-    {
-      id: 'mock-knysna-2',
-      title: 'Lagoon Cruise Sunset Tour',
-      organiser: 'Knysna Charters',
-      category: 'Fun',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 4).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 16:30`,
-      start: new Date(Date.now() + 86400000 * 4).toISOString(),
-      end: new Date(Date.now() + 86400000 * 4 + 7200000).toISOString(),
-      area: 'Knysna',
-      location: 'Thesen Island Harbour',
-      address: 'Thesen Island, Knysna, Western Cape',
-      latitude: -34.0431,
-      longitude: 23.0575,
-      phone: '+27 44 382 4911',
-      whatsapp: '+27 72 345 6789',
-      website: 'https://knysnacharters.co.za',
-      instagram: '@knysnacharters',
-      img: 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=800&h=500&fit=crop',
-      desc: 'Scenic lagoon cruise with champagne and canapés. Perfect views of the Knysna Heads at sunset.',
-      status: 'published',
-      featured: true,
-      viewCount: 389,
-      businessId: 'mock-knysna-charters',
-      user_id: null,
-    },
-    {
-      id: 'mock-knysna-3',
-      title: 'Forest Trail Run',
-      organiser: 'Knysna Sports Club',
-      category: 'Sports',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 14).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 06:00`,
-      start: new Date(Date.now() + 86400000 * 14).toISOString(),
-      end: new Date(Date.now() + 86400000 * 14 + 18000000).toISOString(),
-      area: 'Knysna',
-      location: 'Diepwalle Forest Station',
-      address: 'Diepwalle, Knysna, Western Cape',
-      latitude: -33.9511,
-      longitude: 23.0894,
-      phone: '+27 44 382 3037',
-      whatsapp: '+27 74 456 7890',
-      website: 'https://knysnasports.co.za',
-      instagram: '@knysnatrailrun',
-      img: 'https://images.unsplash.com/photo-1461896836934- voices-6074-23e3dd1c2b11?w=800&h=500&fit=crop',
-      desc: 'Trail running through indigenous forests. Multiple distance options for all fitness levels.',
-      status: 'published',
-      featured: false,
-      viewCount: 267,
-      businessId: 'mock-knysna-sports',
-      user_id: null,
-    },
-    {
-      id: 'mock-knysna-4',
-      title: 'Rastafarian Cultural Experience',
-      organiser: 'Khayalethu Community',
-      category: 'Community',
-      today: false,
-      dateLabel: `${new Date(Date.now() + 86400000 * 6).toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})} · 14:00`,
-      start: new Date(Date.now() + 86400000 * 6).toISOString(),
-      end: new Date(Date.now() + 86400000 * 6 + 18000000).toISOString(),
-      area: 'Knysna',
-      location: 'Khayalethu Township',
-      address: 'Khayalethu, Knysna, Western Cape',
-      latitude: -34.0239,
-      longitude: 23.0406,
-      phone: '+27 44 382 1723',
-      whatsapp: '+27 75 678 9012',
-      website: 'https://khayalethutours.co.za',
-      instagram: '@khayalethu',
-      img: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=800&h=500&fit=crop',
-      desc: 'Authentic township tour with traditional food, music, and stories from the local community.',
-      status: 'published',
-      featured: false,
-      viewCount: 198,
-      businessId: 'mock-khayalethu',
-      user_id: null,
-    },
-  ], []);
+
 
   // Fetch events
   useEffect(() => {
@@ -3143,16 +2794,14 @@ export default function App() {
           businessId: event.business_id,
           user_id: event.user_id,
         }));
-        // Combine real events with mock events
-        setEvents([...formatted, ...mockEvents]);
+        setEvents(formatted);
       } else {
-        // If no real events, use mock events
-        setEvents(mockEvents);
+        setEvents([]);
       }
       setEventsLoading(false);
     };
     loadEvents();
-  }, [mockEvents]);
+  }, []);
 
   const { location, requestLocation, setManualLocation, sortByDistance, filterByRadius } = useLocation();
   const [radiusKm, setRadiusKm] = useState(100);
@@ -3172,15 +2821,34 @@ export default function App() {
     setCat(newFilters.category);
   }, []);
 
+  // Toggle favourite for an event
+  const handleToggleFavourite = useCallback((eventId) => {
+    setFavouriteIds(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      saveFavourites(next);
+      return next;
+    });
+  }, []);
+
+  // Events enriched with isFavorite flag
+  const enrichedEvents = useMemo(() => {
+    return events.map(e => ({ ...e, isFavorite: favouriteIds.has(e.id) }));
+  }, [events, favouriteIds]);
+
   const filteredEvents = useMemo(() => {
-    let ev = events.filter(e => e.status !== "removed");
+    let ev = enrichedEvents.filter(e => e.status !== "removed");
 
     if (cat !== "all") {
       ev = ev.filter(e => e.category?.toLowerCase() === cat.toLowerCase());
     }
 
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase();
       ev = ev.filter(e =>
         e.title?.toLowerCase().includes(query) ||
         e.desc?.toLowerCase().includes(query) ||
@@ -3203,13 +2871,13 @@ export default function App() {
       });
     }
     return sorted;
-  }, [events, cat, sortBy, searchQuery, location]);
+  }, [enrichedEvents, cat, sortBy, debouncedSearchQuery, location]);
 
   const handleLogin = useCallback(async (email, password, keepSignedIn = false) => {
     const result = await signIn(email, password, keepSignedIn);
     if (result.success) {
       setShowAuth(false);
-      setTab("hub");
+      setTab("home");
     }
     return result;
   }, [signIn]);
@@ -3435,7 +3103,7 @@ export default function App() {
               <HomeScreen
                 user={appUser}
                 location={location}
-                events={events}
+                events={enrichedEvents}
                 eventsLoading={eventsLoading}
                 onEventClick={setSelectedEvent}
                 onSeeAllClick={() => handleTab("events")}
@@ -3489,7 +3157,13 @@ export default function App() {
               <AccountScreen
                 user={appUser}
                 events={events}
-                onCreateEvent={() => setShowCreate(true)}
+                onCreateEvent={() => {
+                  if (!user) {
+                    setShowAuth(true);
+                    return;
+                  }
+                  setShowCreate(true);
+                }}
                 onManageEvents={() => setShowMyEv(true)}
                 onEditProfile={() => setShowEditProfile(true)}
                 onPrivacySettings={() => setShowPrivacySettings(true)}
@@ -3846,6 +3520,10 @@ export default function App() {
             businessId={appUser?.id}
             onBack={() => setShowMyEv(false)}
             onCreate={() => {
+              if (!user) {
+                setShowAuth(true);
+                return;
+              }
               setShowMyEv(false);
               setShowCreate(true);
             }}

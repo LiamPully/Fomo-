@@ -2,9 +2,10 @@
 -- Run this after creating the schema
 
 -- Insert sample businesses
-INSERT INTO businesses (id, name, email, phone, subscription_status, event_count) VALUES
-    ('b1', 'Cape Town Markets Co.', 'paid@demo.com', '+27 21 424 0805', 'active', 2),
-    ('b2', 'Joburg Events', 'free@demo.com', '+27 11 838 5678', 'free', 0);
+-- FIX: column is business_name (not name), and id must be valid UUID
+INSERT INTO businesses (id, business_name, email, phone, subscription_status, event_count) VALUES
+    ('b1b1b1b1-0000-0000-0000-000000000001', 'Cape Town Markets Co.', 'paid@demo.com', '+27 21 424 0805', 'active', 2),
+    ('b2b2b2b2-0000-0000-0000-000000000002', 'Joburg Events', 'free@demo.com', '+27 11 838 5678', 'free', 0);
 
 -- Insert sample events
 INSERT INTO events (
@@ -15,7 +16,9 @@ INSERT INTO events (
     image_url, status, featured
 ) VALUES
     (
-        '1', 'b1', 1, 'Oranjezicht City Farm Market',
+        'e1e1e1e1-0000-0000-0000-000000000001',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        1, 'Oranjezicht City Farm Market',
         'Cape Town''s favourite weekly market. Fresh local produce, artisan goods, food stalls and a stunning harbour view every Friday and Saturday.',
         'OZCF',
         'V&A Waterfront', 'V&A Waterfront, Cape Town', 'V&A Waterfront\nCape Town',
@@ -25,7 +28,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/market1/800/500', 'published', true
     ),
     (
-        '2', 'b1', 1, 'Neighbourhood Goods Market',
+        'e2e2e2e2-0000-0000-0000-000000000002',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        1, 'Neighbourhood Goods Market',
         'The iconic Saturday market at the Old Biscuit Mill. Artisan food, craft goods, flowers and world-class coffee every week.',
         'NGM',
         'The Old Biscuit Mill', 'Woodstock, Cape Town', '375 Albert Rd\nWoodstock, Cape Town',
@@ -35,7 +40,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/market2/800/500', 'published', true
     ),
     (
-        '3', 'b1', 1, 'Greenside Morning Farmers Market',
+        'e3e3e3e3-0000-0000-0000-000000000003',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        1, 'Greenside Morning Farmers Market',
         'A relaxed community market with organic produce, homemade preserves and fresh flowers every Monday morning.',
         'Greenside Market',
         'Greenside', 'Greenside, Johannesburg', 'Greenside\nJohannesburg',
@@ -45,7 +52,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/market3/800/500', 'published', false
     ),
     (
-        '4', 'b1', 3, 'Durban Street Food Festival',
+        'e4e4e4e4-0000-0000-0000-000000000004',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        3, 'Durban Street Food Festival',
         'A celebration of Durban''s incredible street food scene. From bunny chow to vetkoek, breyani to grilled corn. Street performers, DJ sets, and family fun.',
         'Durban Events Co',
         'Moses Mabhida Stadium Precinct', 'Stamford Hill, Durban', '44 Isaiah Ntshangase Rd, Durban\nStamford Hill, Durban',
@@ -55,7 +64,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/food4/800/500', 'published', true
     ),
     (
-        '5', 'b1', 2, 'Cape Town Art Fair Pop-Up',
+        'e5e5e5e5-0000-0000-0000-000000000005',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        2, 'Cape Town Art Fair Pop-Up',
         'Discover emerging South African artists at this curated pop-up gallery. Over 40 artists showing paintings, photography, sculpture, and digital art.',
         'CT Art Collective',
         'Cape Quarter Lifestyle Village', 'De Waterkant, Cape Town', 'Napier St, De Waterkant\nDe Waterkant, Cape Town',
@@ -65,7 +76,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/art5/800/500', 'published', false
     ),
     (
-        '6', 'b1', 3, 'Trail Run: Table Mountain Explorer',
+        'e6e6e6e6-0000-0000-0000-000000000006',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        3, 'Trail Run: Table Mountain Explorer',
         'Join 300 runners for a breathtaking trail run on the slopes of Table Mountain. Three distance options: 10km, 21km, and 42km.',
         'Trail Run SA',
         'Tafelberg Road Parking', 'Gardens, Cape Town', 'Tafelberg Rd, Table Mountain\nGardens, Cape Town',
@@ -75,7 +88,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/trail6/800/500', 'published', false
     ),
     (
-        '7', 'b1', 1, 'Pretoria Night Market',
+        'e7e7e7e7-0000-0000-0000-000000000007',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        1, 'Pretoria Night Market',
         'Pretoria''s favourite evening market under the stars. Street food, craft beers, live music and artisan goods in the heart of the city.',
         'Tshwane Events',
         'Church Square', 'Pretoria CBD, Pretoria', 'Church Square\nPretoria CBD, Pretoria',
@@ -85,7 +100,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/night7/800/500', 'published', false
     ),
     (
-        '8', 'b1', 1, 'Maboneng Sunday Market',
+        'e8e8e8e8-0000-0000-0000-000000000008',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        1, 'Maboneng Sunday Market',
         'The iconic Sunday market in Maboneng. Artists, makers, food vendors and musicians come together in Joburg''s most creative neighbourhood.',
         'Maboneng Precinct',
         'Arts on Main', 'Maboneng, Johannesburg', '264 Fox St\nMaboneng, Johannesburg',
@@ -95,7 +112,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/maboneng8/800/500', 'published', true
     ),
     (
-        '9', 'b1', 4, 'Yoga in the Botanical Gardens',
+        'e9e9e9e9-0000-0000-0000-000000000009',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        4, 'Yoga in the Botanical Gardens',
         'Find your centre among the ferns and fynbos. A 90-minute sunrise yoga session with certified instructor Thandi Mokoena. All levels welcome.',
         'Mindful Cape Town',
         'Kirstenbosch National Botanical Garden', 'Newlands, Cape Town', 'Rhodes Dr, Newlands\nNewlands, Cape Town',
@@ -105,7 +124,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/yoga9/800/500', 'published', false
     ),
     (
-        '10', 'b1', 3, 'Joburg Craft Beer Festival',
+        'eaeaeaea-0000-0000-0000-00000000000a',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        3, 'Joburg Craft Beer Festival',
         '80+ craft beers from across SA. Live music all day, food trucks, and a home-brewing competition. 18+ only.',
         'Brew Culture SA',
         'Newtown Junction', 'Newtown, Johannesburg', 'Newtown Junction\nJohannesburg',
@@ -115,7 +136,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/beer10/800/500', 'published', true
     ),
     (
-        '11', 'b1', 2, 'Cape Town Jazz Festival',
+        'ebebebeb-0000-0000-0000-00000000000b',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        2, 'Cape Town Jazz Festival',
         'Africa''s Grand Jazz Festival returns. Two stages, 40+ artists, world-class performances and the magic of Cape Town at night.',
         'CTIJF',
         'CTICC & Artscape', 'Cape Town CBD', 'Convention Square\nCape Town',
@@ -125,7 +148,9 @@ INSERT INTO events (
         'https://picsum.photos/seed/jazz11/800/500', 'published', true
     ),
     (
-        '12', 'b1', 2, 'Soweto Wine & Lifestyle Festival',
+        'ecececec-0000-0000-0000-00000000000c',
+        'b1b1b1b1-0000-0000-0000-000000000001',
+        2, 'Soweto Wine & Lifestyle Festival',
         'The ultimate celebration of SA wine culture, food and music in the heart of Soweto. Wine tastings, gourmet street food and live performances.',
         'SWF',
         'Ubuntu Kraal Brewery', 'Soweto, Johannesburg', 'Vilakazi St\nOrlando West, Soweto',

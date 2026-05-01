@@ -1,17 +1,9 @@
 import { useState, useCallback, useRef, useEffect, memo } from "react";
-import "../styles/modern-design.css";
-
-// Modern Design Tokens
-const BG = "#F8F9FA";
-const WHITE = "#FFFFFF";
-const BLACK = "#1A1A1A";
-const GRAY = "#5F6368";
-const GRAY_LIGHT = "#F1F3F4";
-const GRAY_MEDIUM = "#80868B";
-const ACCENT = "#E85D3F";
-const ACCENT_LIGHT = "#FFF5F2";
-const FONT =
-  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+import {
+  BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ACCENT_LIGHT, FONT,
+  SHADOW_CARD, OVERLAY_LIGHT, ERROR_LIGHT,
+} from "../lib/theme";
+import "../styles/airbnb-inspired.css";
 
 // User Types Configuration
 const USER_TYPES = [
@@ -387,7 +379,10 @@ const AuthModal = ({
 
   const validatePassword = (pass) => {
     if (!pass) return "Password is required";
-    if (pass.length < 6) return "Password must be at least 6 characters";
+    if (pass.length < 8) return "Password must be at least 8 characters";
+    if (!/[A-Z]/.test(pass)) return "Password must contain an uppercase letter";
+    if (!/[a-z]/.test(pass)) return "Password must contain a lowercase letter";
+    if (!/[0-9]/.test(pass)) return "Password must contain a number";
     return null;
   };
 
@@ -530,8 +525,8 @@ const AuthModal = ({
     const emailError = validateEmail(email);
     if (emailError) errors.email = emailError;
 
-    const passError = validatePassword(pass);
-    if (passError) errors.password = passError;
+    // For login, only validate that password is non-empty (strength is enforced at signup only)
+    if (!pass) errors.password = "Password is required";
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -596,7 +591,7 @@ const AuthModal = ({
       {displayError && (
         <div
           style={{
-            background: "#FEE2E2",
+            background: ERROR_LIGHT,
             borderRadius: 10,
             padding: "12px 16px",
             marginBottom: 16,
@@ -737,7 +732,7 @@ const AuthModal = ({
         {displayError && (
           <div
             style={{
-              background: "#FEE2E2",
+              background: ERROR_LIGHT,
               borderRadius: 10,
               padding: "12px 16px",
               marginBottom: 16,
@@ -941,7 +936,7 @@ const AuthModal = ({
       {displayError && (
         <div
           style={{
-            background: "#FEE2E2",
+            background: ERROR_LIGHT,
             borderRadius: 10,
             padding: "12px 16px",
             marginBottom: 16,
@@ -1072,7 +1067,7 @@ const AuthModal = ({
         position: "fixed",
         inset: 0,
         zIndex: 200,
-        background: "rgba(0,0,0,0.4)",
+        background: OVERLAY_LIGHT,
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-end",

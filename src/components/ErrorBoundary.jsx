@@ -1,12 +1,6 @@
 import { Component } from 'react';
-import '../styles/design-system.css';
-
-const FONT = "'Sora', system-ui, sans-serif";
-const BLACK = '#111111';
-const WHITE = '#FFFFFF';
-const ORANGE = '#E8783A';
-const GRAY1 = '#888880';
-const GRAY3 = '#F7F5F1';
+import { BG, BLACK, WHITE, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ERROR, ERROR_LIGHT, FONT, SHADOW_CARD } from '../lib/theme';
+import '../styles/airbnb-inspired.css';
 
 /**
  * Browser extension error patterns to suppress
@@ -165,7 +159,7 @@ class ErrorBoundary extends Component {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px',
-            background: '#F0EDE6',
+            background: BG,
             fontFamily: FONT
           }}
         >
@@ -177,7 +171,7 @@ class ErrorBoundary extends Component {
               maxWidth: 400,
               width: '100%',
               textAlign: 'center',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.1)'
+              boxShadow: SHADOW_CARD
             }}
           >
             {/* Error Icon */}
@@ -185,7 +179,7 @@ class ErrorBoundary extends Component {
               style={{
                 width: 72,
                 height: 72,
-                background: '#FEE2E2',
+                background: ERROR_LIGHT,
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -198,7 +192,7 @@ class ErrorBoundary extends Component {
                 height="32"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#DC2626"
+                stroke={ERROR}
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -224,7 +218,7 @@ class ErrorBoundary extends Component {
             <p
               style={{
                 fontSize: 14,
-                color: GRAY1,
+                color: GRAY_MEDIUM,
                 lineHeight: 1.6,
                 marginBottom: 24
               }}
@@ -236,7 +230,7 @@ class ErrorBoundary extends Component {
             {import.meta.env.DEV && this.state.error && (
               <details
                 style={{
-                  background: GRAY3,
+                  background: GRAY_LIGHT,
                   borderRadius: 12,
                   padding: 16,
                   marginBottom: 24,
@@ -285,7 +279,7 @@ class ErrorBoundary extends Component {
                 onClick={this.handleReload}
                 style={{
                   background: 'transparent',
-                  color: GRAY1,
+                  color: GRAY_MEDIUM,
                   border: 'none',
                   borderRadius: 999,
                   padding: '12px 24px',
@@ -304,7 +298,7 @@ class ErrorBoundary extends Component {
             style={{
               marginTop: 24,
               fontSize: 12,
-              color: GRAY1
+              color: GRAY_MEDIUM
             }}
           >
             If this problem persists, please contact support.

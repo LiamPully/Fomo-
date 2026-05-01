@@ -1,4 +1,7 @@
 import { useState, useCallback, memo } from 'react';
+import {
+  BLACK, WHITE, GRAY_LIGHT, GRAY_MEDIUM, WARNING, WARNING_LIGHT, SUCCESS, SUCCESS_LIGHT, FONT,
+} from '../lib/theme';
 
 /**
  * EmailVerificationBanner - Reminds users to verify their email
@@ -9,19 +12,6 @@ import { useState, useCallback, memo } from 'react';
  * - Dismissible
  * - Loading state for resend action
  */
-
-// Colors from design system
-const COLORS = {
-  gray1: '#888880',
-  gray2: '#E4E1DA',
-  gray3: '#F7F5F1',
-  black: '#111111',
-  orange: '#E8783A',
-  white: '#FFFFFF',
-  warning: '#D97706',
-  warningBg: '#FEF3C7',
-  warningBorder: '#FCD34D',
-};
 
 /**
  * Email icon
@@ -151,8 +141,8 @@ const EmailVerificationBanner = memo(({
   return (
     <div
       style={{
-        backgroundColor: COLORS.warningBg,
-        border: `1px solid ${COLORS.warningBorder}`,
+        backgroundColor: WARNING_LIGHT,
+        border: `1px solid ${WARNING_LIGHT}`,
         borderRadius: '12px',
         padding: '12px 14px',
         marginBottom: '16px',
@@ -173,11 +163,11 @@ const EmailVerificationBanner = memo(({
             width: '36px',
             height: '36px',
             borderRadius: '10px',
-            backgroundColor: COLORS.white,
+            backgroundColor: WHITE,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: COLORS.warning,
+            color: WARNING,
           }}
         >
           <EmailIcon />
@@ -190,8 +180,8 @@ const EmailVerificationBanner = memo(({
               margin: '0 0 4px 0',
               fontSize: '14px',
               fontWeight: 700,
-              color: COLORS.black,
-              fontFamily: "'Sora', system-ui, sans-serif",
+              color: BLACK,
+              fontFamily: FONT,
             }}
           >
             Verify your email
@@ -200,13 +190,13 @@ const EmailVerificationBanner = memo(({
             style={{
               margin: '0 0 10px 0',
               fontSize: '13px',
-              color: COLORS.gray1,
+              color: GRAY_MEDIUM,
               lineHeight: 1.45,
-              fontFamily: "'Sora', system-ui, sans-serif",
+              fontFamily: FONT,
             }}
           >
             Please check your inbox at{' '}
-            <strong style={{ color: COLORS.black }}>{email}</strong> and click
+            <strong style={{ color: BLACK }}>{email}</strong> and click
             the verification link to complete your registration.
           </p>
 
@@ -226,13 +216,13 @@ const EmailVerificationBanner = memo(({
                 alignItems: 'center',
                 gap: '6px',
                 padding: '8px 14px',
-                backgroundColor: canResend && !isSending ? COLORS.black : COLORS.gray2,
-                color: canResend && !isSending ? COLORS.white : COLORS.gray1,
+                backgroundColor: canResend && !isSending ? BLACK : GRAY_LIGHT,
+                color: canResend && !isSending ? WHITE : GRAY_MEDIUM,
                 border: 'none',
                 borderRadius: '999px',
                 fontSize: '12px',
                 fontWeight: 700,
-                fontFamily: "'Sora', system-ui, sans-serif",
+                fontFamily: FONT,
                 cursor: canResend && !isSending ? 'pointer' : 'not-allowed',
                 transition: 'all 0.15s ease',
                 opacity: canResend && !isSending ? 1 : 0.7,
@@ -262,10 +252,10 @@ const EmailVerificationBanner = memo(({
               style={{
                 marginTop: '8px',
                 padding: '8px 12px',
-                backgroundColor: '#D1FAE5',
+                backgroundColor: SUCCESS_LIGHT,
                 borderRadius: '8px',
                 fontSize: '12px',
-                color: '#059669',
+                color: SUCCESS,
                 fontWeight: 600,
                 animation: 'fadeIn 0.2s ease',
               }}
@@ -291,7 +281,7 @@ const EmailVerificationBanner = memo(({
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            color: COLORS.gray1,
+            color: GRAY_MEDIUM,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -299,11 +289,11 @@ const EmailVerificationBanner = memo(({
             transition: 'color 0.15s ease, background-color 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = COLORS.black;
+            e.currentTarget.style.color = BLACK;
             e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.color = COLORS.gray1;
+            e.currentTarget.style.color = GRAY_MEDIUM;
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >

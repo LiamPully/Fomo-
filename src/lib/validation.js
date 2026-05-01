@@ -1,4 +1,5 @@
 // API Input Validation Utilities
+import { sanitizeHtml } from './security';
 
 /**
  * Sanitizes a string input to prevent SQL injection
@@ -53,13 +54,13 @@ export const validateEventData = (data) => {
   if (!data.title || typeof data.title !== 'string' || data.title.trim().length < 2) {
     errors.push('Title is required and must be at least 2 characters');
   } else {
-    sanitized.title = data.title.trim().slice(0, 255); // Max length
+    sanitized.title = sanitizeHtml(data.title.trim().slice(0, 255)); // Max length + XSS sanitize
   }
 
   if (!data.area || typeof data.area !== 'string' || data.area.trim().length < 1) {
     errors.push('Area/location is required');
   } else {
-    sanitized.area = data.area.trim().slice(0, 255);
+    sanitized.area = sanitizeHtml(data.area.trim().slice(0, 255));
   }
 
   // Date validation
@@ -94,15 +95,15 @@ export const validateEventData = (data) => {
 
   // Optional fields with sanitization
   if (data.description) {
-    sanitized.description = String(data.description).slice(0, 5000); // Max 5000 chars
+    sanitized.description = sanitizeHtml(String(data.description).slice(0, 5000)); // Max 5000 chars + XSS sanitize
   }
 
   if (data.venue) {
-    sanitized.venue = String(data.venue).trim().slice(0, 255);
+    sanitized.venue = sanitizeHtml(String(data.venue).trim().slice(0, 255));
   }
 
   if (data.organiser) {
-    sanitized.organiser = String(data.organiser).trim().slice(0, 255);
+    sanitized.organiser = sanitizeHtml(String(data.organiser).trim().slice(0, 255));
   }
 
   // Phone validation (basic)
@@ -244,7 +245,7 @@ export const validateBusinessData = (data) => {
   if (!data.business_name || typeof data.business_name !== 'string' || data.business_name.trim().length < 2) {
     errors.push('Business name is required and must be at least 2 characters');
   } else {
-    sanitized.business_name = data.business_name.trim().slice(0, 255);
+    sanitized.business_name = sanitizeHtml(data.business_name.trim().slice(0, 255));
   }
 
   if (!data.email) {

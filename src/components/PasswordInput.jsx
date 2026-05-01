@@ -1,5 +1,8 @@
 import { useState, useCallback, memo } from 'react';
 import { getPasswordValidation } from '../hooks/useAuth';
+import {
+  BLACK, WHITE, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, SUCCESS, WARNING, ERROR, FONT,
+} from '../lib/theme';
 
 /**
  * PasswordInput - Production-ready password input with strength meter
@@ -12,26 +15,13 @@ import { getPasswordValidation } from '../hooks/useAuth';
  * - Mobile-friendly
  */
 
-// Colors from design system
-const COLORS = {
-  gray1: '#888880',
-  gray2: '#E4E1DA',
-  gray3: '#F7F5F1',
-  black: '#111111',
-  orange: '#E8783A',
-  white: '#FFFFFF',
-  success: '#059669',
-  warning: '#D97706',
-  error: '#DC2626',
-};
-
 // Strength colors
 const STRENGTH_COLORS = {
-  weak: '#DC2626',
-  fair: '#D97706',
-  good: '#E8783A',
-  strong: '#059669',
-  excellent: '#059669',
+  weak: ERROR,
+  fair: WARNING,
+  good: ACCENT,
+  strong: SUCCESS,
+  excellent: SUCCESS,
 };
 
 // Strength labels
@@ -69,7 +59,7 @@ const StrengthMeter = memo(({ strength, score }) => {
         <span
           style={{
             fontSize: '11px',
-            color: COLORS.gray1,
+            color: GRAY_MEDIUM,
             fontWeight: 600,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
@@ -80,7 +70,7 @@ const StrengthMeter = memo(({ strength, score }) => {
         <span
           style={{
             fontSize: '11px',
-            color: STRENGTH_COLORS[strength] || COLORS.gray1,
+            color: STRENGTH_COLORS[strength] || GRAY_MEDIUM,
             fontWeight: 700,
           }}
         >
@@ -105,8 +95,8 @@ const StrengthMeter = memo(({ strength, score }) => {
               borderRadius: '2px',
               backgroundColor:
                 index < filledSegments
-                  ? STRENGTH_COLORS[strength] || COLORS.gray2
-                  : COLORS.gray2,
+                  ? STRENGTH_COLORS[strength] || GRAY_LIGHT
+                  : GRAY_LIGHT,
               transition: 'background-color 0.2s ease',
             }}
           />
@@ -141,18 +131,18 @@ const RequirementsTooltip = memo(({ validation, isVisible }) => {
         right: 0,
         marginTop: '8px',
         padding: '12px 14px',
-        backgroundColor: COLORS.white,
+        backgroundColor: WHITE,
         borderRadius: '12px',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
         zIndex: 100,
-        border: `1px solid ${COLORS.gray2}`,
+        border: `1px solid ${GRAY_LIGHT}`,
       }}
     >
       <p
         style={{
           fontSize: '11px',
           fontWeight: 700,
-          color: COLORS.black,
+          color: BLACK,
           margin: '0 0 8px 0',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
@@ -178,7 +168,7 @@ const RequirementsTooltip = memo(({ validation, isVisible }) => {
                 gap: '8px',
                 padding: '3px 0',
                 fontSize: '12px',
-                color: isMet ? COLORS.success : COLORS.gray1,
+                color: isMet ? SUCCESS : GRAY_MEDIUM,
                 fontWeight: isMet ? 600 : 400,
                 transition: 'color 0.15s ease',
               }}
@@ -191,8 +181,8 @@ const RequirementsTooltip = memo(({ validation, isVisible }) => {
                   width: '14px',
                   height: '14px',
                   borderRadius: '50%',
-                  backgroundColor: isMet ? COLORS.success : COLORS.gray2,
-                  color: COLORS.white,
+                  backgroundColor: isMet ? SUCCESS : GRAY_LIGHT,
+                  color: WHITE,
                   fontSize: '9px',
                   fontWeight: 700,
                 }}
@@ -315,13 +305,13 @@ const PasswordInput = memo(({
           disabled={disabled}
           style={{
             width: '100%',
-            border: `1.5px solid ${error ? COLORS.orange : isFocused ? COLORS.black : COLORS.gray2}`,
+            border: `1.5px solid ${error ? ACCENT : isFocused ? BLACK : GRAY_LIGHT}`,
             borderRadius: '14px',
             padding: '13px 45px 13px 15px',
             fontSize: '16px',
             outline: 'none',
-            background: COLORS.gray3,
-            fontFamily: "'Sora', system-ui, sans-serif",
+            background: WHITE,
+            fontFamily: FONT,
             boxSizing: 'border-box',
             WebkitAppearance: 'none',
             touchAction: 'manipulation',
@@ -346,7 +336,7 @@ const PasswordInput = memo(({
             border: 'none',
             padding: '6px',
             cursor: disabled ? 'not-allowed' : 'pointer',
-            color: COLORS.gray1,
+            color: GRAY_MEDIUM,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -356,12 +346,12 @@ const PasswordInput = memo(({
           }}
           onMouseEnter={(e) => {
             if (!disabled) {
-              e.currentTarget.style.color = COLORS.black;
-              e.currentTarget.style.backgroundColor = COLORS.gray2;
+              e.currentTarget.style.color = BLACK;
+              e.currentTarget.style.backgroundColor = GRAY_LIGHT;
             }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.color = COLORS.gray1;
+            e.currentTarget.style.color = GRAY_MEDIUM;
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >

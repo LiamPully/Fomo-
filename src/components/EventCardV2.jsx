@@ -154,7 +154,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
           >
             <span
               style={{
-                fontSize: ''12px'',
+                fontSize: '12px',
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
@@ -166,12 +166,12 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
             {dateInfo.isToday && (
               <span
                 style={{
-                  fontSize: ''12px'',
+                  fontSize: '12px',
                   fontWeight: 700,
                   color: ACCENT,
                   background: ACCENT_LIGHT,
                   padding: '2px 8px',
-                  borderRadius: ''9999px'',
+                  borderRadius: '9999px',
                 }}
               >
                 Today
@@ -281,7 +281,7 @@ const EventCardV2 = ({ event, onClick, variant = 'hero' }) => {
               background: ACCENT,
               color: 'white',
               padding: '6px 14px',
-              borderRadius: ''9999px'',
+              borderRadius: '9999px',
               fontSize: '14px',
               fontWeight: 700,
               boxShadow: '0 2px 8px rgba(199, 91, 57, 0.3)',

@@ -52,7 +52,29 @@ export const getOrCreateBusiness = async (userId, businessData) => {
   }
 }
 
-// Get business by ID
+// Get business for current authenticated user
+export const getMyBusiness = async () => {
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { data: null, error: { message: 'Authentication required' } };
+    }
+
+    const { data, error } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching own business:', error)
+    return { data: null, error }
+  }
+}
+
+// Get business by ID (public profile — strips sensitive fields)
 export const getBusiness = async (id) => {
   try {
     // Validate ID
@@ -63,7 +85,7 @@ export const getBusiness = async (id) => {
 
     const { data, error } = await supabase
       .from('businesses')
-      .select('*')
+      .select('id, business_name, website, instagram, event_count, created_at')
       .eq('id', id)
       .single()
 
@@ -75,7 +97,7 @@ export const getBusiness = async (id) => {
   }
 }
 
-// Update business
+// Update business — FIX: verify caller owns the business before updating
 export const updateBusiness = async (id, updates) => {
   try {
     // Validate ID
@@ -87,6 +109,26 @@ export const updateBusiness = async (id, updates) => {
     // Validate updates
     if (!updates || typeof updates !== 'object') {
       return { data: null, error: { message: 'Update data is required' } };
+    }
+
+    // FIX: verify the current user owns this business
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { data: null, error: { message: 'Authentication required' } };
+    }
+
+    const { data: bizCheck, error: bizError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (bizError) {
+      return { data: null, error: { message: 'Could not verify business ownership' } };
+    }
+    if (!bizCheck) {
+      return { data: null, error: { message: 'Business not found or access denied' } };
     }
 
     // Partial validation for updates
@@ -115,16 +157,22 @@ export const updateBusiness = async (id, updates) => {
     }
 
     if (updates.website !== undefined) {
-      const urlRegex = /^https?:\/\/.+/;
-      if (!urlRegex.test(updates.website)) {
-        errors.push('Website must be a valid URL');
+      if (updates.website) {
+        const urlRegex = /^https?:\/\/.+/;
+        if (!urlRegex.test(updates.website)) {
+          errors.push('Website must be a valid URL');
+        } else {
+          sanitized.website = updates.website.slice(0, 255);
+        }
       } else {
-        sanitized.website = updates.website.slice(0, 255);
+        sanitized.website = null;
       }
     }
 
     if (updates.instagram !== undefined) {
-      sanitized.instagram = String(updates.instagram).trim().slice(0, 100);
+      sanitized.instagram = updates.instagram
+        ? String(updates.instagram).trim().slice(0, 100)
+        : null;
     }
 
     if (errors.length > 0) {

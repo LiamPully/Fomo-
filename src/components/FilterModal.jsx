@@ -1,17 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { MAIN_CATEGORIES } from "../lib/categories";
-import "../styles/modern-design.css";
-
-// Modern Design Tokens
-const FONT =
-  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-const BG = "#F8F9FA";
-const BLACK = "#1A1A1A";
-const WHITE = "#FFFFFF";
-const ACCENT = "#E85D3F";
-const GRAY = "#5F6368";
-const GRAY_LIGHT = "#F1F3F4";
-const GRAY_MEDIUM = "#80868B";
+import {
+  BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, FONT,
+  SHADOW_CARD, SHADOW_BUTTON, OVERLAY_LIGHT,
+} from "../lib/theme";
+import "../styles/airbnb-inspired.css";
 
 const SORT_OPTIONS = [
   { id: "chronological", label: "Date", desc: "Soonest first" },
@@ -97,7 +90,7 @@ export const FilterModal = ({
         left: 0,
         right: 0,
         bottom: 0,
-        background: "rgba(0,0,0,0.4)",
+        background: OVERLAY_LIGHT,
         zIndex: 200,
         display: "flex",
         alignItems: "flex-end",
@@ -305,8 +298,8 @@ export const FilterModal = ({
                     transition: "all 0.15s ease",
                     boxShadow:
                       localFilters.period === opt.id
-                        ? "0 2px 8px rgba(0,0,0,0.15)"
-                        : "0 1px 3px rgba(0,0,0,0.08)",
+                        ? SHADOW_BUTTON
+                        : SHADOW_CARD,
                   }}
                 >
                   {opt.label}
@@ -352,7 +345,7 @@ export const FilterModal = ({
                       boxShadow:
                         localFilters.distance === dist
                           ? "0 2px 8px rgba(232,93,63,0.3)"
-                          : "0 1px 3px rgba(0,0,0,0.08)",
+                          : SHADOW_CARD,
                     }}
                   >
                     {dist}km
@@ -397,8 +390,8 @@ export const FilterModal = ({
                     transition: "all 0.15s ease",
                     boxShadow:
                       localFilters.category === cat.id
-                        ? "0 2px 8px rgba(0,0,0,0.15)"
-                        : "0 1px 3px rgba(0,0,0,0.08)",
+                        ? SHADOW_BUTTON
+                        : SHADOW_CARD,
                   }}
                 >
                   {cat.name}

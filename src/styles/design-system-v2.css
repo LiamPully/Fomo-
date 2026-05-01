@@ -3,8 +3,6 @@
    "Heritage Modern" — A warm, editorial aesthetic for South Africa
    ═══════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
-
 :root {
   /* ═══════════════════════════════════════════════════════════════
      TYPOGRAPHY — Editorial pairing
@@ -135,7 +133,7 @@ html {
 
 html, body {
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 body {
@@ -145,8 +143,8 @@ body {
 }
 
 #root {
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-x: hidden;
 }
 
 /* Hide scrollbar but keep functionality */
@@ -215,13 +213,12 @@ body {
   width: 100%;
   max-width: var(--app-max-width);
   margin: 0 auto;
-  height: 100vh;
-  height: 100dvh; /* Dynamic viewport for mobile */
+  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  overflow: hidden;
 }
 
 /* Hero Event Card */

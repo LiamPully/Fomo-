@@ -1,9 +1,5 @@
 import { memo } from 'react';
-
-// Airbnb-Inspired Design Tokens
-const BG = '#F8F9FA';
-const GRAY_LIGHT = '#F1F3F4';
-const GRAY_MEDIUM = '#E8EAED';
+import { GRAY_LIGHT, GRAY_MEDIUM, SHADOW_CARD } from '../lib/theme';
 
 /**
  * SkeletonCard - Airbnb-style shimmer loading card
@@ -17,7 +13,7 @@ export const SkeletonCard = memo(() => {
         borderRadius: 20,
         overflow: 'hidden',
         marginBottom: 16,
-        boxShadow: '0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.1)',
+        boxShadow: SHADOW_CARD,
       }}
     >
       {/* Image skeleton with shimmer */}
@@ -189,7 +185,7 @@ export const SkeletonStats = memo(() => {
             background: 'white',
             borderRadius: 16,
             padding: '16px',
-            boxShadow: '0 0 0 1px rgba(0,0,0,0.02), 0 2px 6px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.1)',
+            boxShadow: SHADOW_CARD,
           }}
         >
           {/* Icon skeleton */}

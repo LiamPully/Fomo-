@@ -96,6 +96,49 @@ const generateUniqueFilename = (originalName) => {
 };
 
 /**
+ * Validate file magic bytes to ensure the file content matches its claimed type
+ * @param {File} file - File to check
+ * @returns {Promise<{valid: boolean, error?: string}>}
+ */
+const validateMagicBytes = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (!reader.result) {
+        resolve({ valid: false, error: 'Could not read file' });
+        return;
+      }
+      const bytes = new Uint8Array(reader.result);
+      const signatures = {
+        jpeg: [0xFF, 0xD8, 0xFF],
+        png: [0x89, 0x50, 0x4E, 0x47],
+        webp: [0x52, 0x49, 0x46, 0x46], // RIFF header
+      };
+
+      const check = (sig) => sig.every((b, i) => bytes[i] === b);
+
+      if (check(signatures.jpeg)) {
+        resolve({ valid: true });
+      } else if (check(signatures.png)) {
+        resolve({ valid: true });
+      } else if (check(signatures.webp)) {
+        // RIFF container - check for WEBP at offset 8
+        const webpSig = [0x57, 0x45, 0x42, 0x50];
+        if (webpSig.every((b, i) => bytes[8 + i] === b)) {
+          resolve({ valid: true });
+        } else {
+          resolve({ valid: false, error: 'Invalid WebP file' });
+        }
+      } else {
+        resolve({ valid: false, error: 'File content does not match allowed image types' });
+      }
+    };
+    reader.onerror = () => resolve({ valid: false, error: 'Could not read file' });
+    reader.readAsArrayBuffer(file.slice(0, 12));
+  });
+};
+
+/**
  * Upload a single image to Supabase Storage
  * @param {File} file - Image file to upload
  * @param {string} eventId - Event ID for folder organization
@@ -116,6 +159,16 @@ export const uploadImage = async (file, eventId, onProgress = () => {}) => {
         url: null,
         thumbnailUrl: null,
         error: new Error(validation.errors?.[0] || 'Invalid file'),
+      };
+    }
+
+    // Validate magic bytes
+    const magicCheck = await validateMagicBytes(file);
+    if (!magicCheck.valid) {
+      return {
+        url: null,
+        thumbnailUrl: null,
+        error: new Error(magicCheck.error || 'Invalid file content'),
       };
     }
 

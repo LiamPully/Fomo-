@@ -1,16 +1,9 @@
 import { useState, useCallback, useRef, memo, useEffect } from "react";
-import "../styles/modern-design.css";
-
-// Modern Design Tokens
-const FONT =
-  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-const GRAY = "#5F6368";
-const GRAY_LIGHT = "#F1F3F4";
-const GRAY_MEDIUM = "#80868B";
-const BLACK = "#1A1A1A";
-const WHITE = "#FFFFFF";
-const ACCENT = "#E85D3F";
-const ACCENT_LIGHT = "#FFF5F2";
+import {
+  GRAY, GRAY_LIGHT, GRAY_MEDIUM, BLACK, WHITE, ACCENT, ACCENT_LIGHT, FONT,
+  SHADOW_CARD, SHADOW_BUTTON,
+} from "../lib/theme";
+import "../styles/airbnb-inspired.css";
 
 // Icon component
 const Icon = ({ name, size = 18, color = BLACK }) => {
@@ -101,7 +94,7 @@ const PredictionList = memo(({ predictions, onSelect, visible }) => {
         maxHeight: 200,
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        boxShadow: SHADOW_BUTTON,
       }}
     >
       {predictions.map((prediction, idx) => (

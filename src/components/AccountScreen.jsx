@@ -308,20 +308,28 @@ const StatsRow = ({ attended, upcoming, favorites, memberSince }) => (
 );
 
 // My Events Tabs
-const MyEventsSection = ({ events, onEventClick, onCreateEvent }) => {
+const MyEventsSection = ({ events, userId, onEventClick, onCreateEvent }) => {
   const [activeTab, setActiveTab] = useState("upcoming");
 
+  // Filter to only this user's events (by businessId or user_id)
+  const myEvents = useMemo(
+    () => userId
+      ? events.filter((e) => e.businessId === userId || e.user_id === userId)
+      : [],
+    [events, userId]
+  );
+
   const upcomingEvents = useMemo(
-    () => events.filter((e) => new Date(e.start) > new Date()),
-    [events]
+    () => myEvents.filter((e) => new Date(e.start) > new Date()),
+    [myEvents]
   );
   const pastEvents = useMemo(
-    () => events.filter((e) => new Date(e.start) <= new Date()),
-    [events]
+    () => myEvents.filter((e) => new Date(e.start) <= new Date()),
+    [myEvents]
   );
   const favoriteEvents = useMemo(
-    () => events.filter((e) => e.isFavorite),
-    [events]
+    () => myEvents.filter((e) => e.isFavorite),
+    [myEvents]
   );
 
   const tabs = [
@@ -782,18 +790,26 @@ const AccountScreen = ({
     return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
   }, [user?.createdAt]);
 
-  // Calculate stats from events
+  // Filter to this user's events for stats
+  const userEvents = useMemo(
+    () => user?.id
+      ? events.filter((e) => e.businessId === user.id || e.user_id === user.id)
+      : [],
+    [events, user?.id]
+  );
+
+  // Calculate stats from user's own events only
   const attendedCount = useMemo(
-    () => events.filter((e) => e.userAttended).length,
-    [events]
+    () => userEvents.filter((e) => e.userAttended).length,
+    [userEvents]
   );
   const upcomingCount = useMemo(
-    () => events.filter((e) => new Date(e.start) > new Date()).length,
-    [events]
+    () => userEvents.filter((e) => new Date(e.start) > new Date()).length,
+    [userEvents]
   );
   const favoritesCount = useMemo(
-    () => events.filter((e) => e.isFavorite).length,
-    [events]
+    () => userEvents.filter((e) => e.isFavorite).length,
+    [userEvents]
   );
 
   if (loading) {
@@ -832,7 +848,7 @@ const AccountScreen = ({
         />
 
         {/* My Events Section */}
-        <MyEventsSection events={events} onEventClick={onManageEvents} onCreateEvent={onCreateEvent} />
+        <MyEventsSection events={events} userId={user?.id} onEventClick={onManageEvents} onCreateEvent={onCreateEvent} />
 
         {/* Account Section */}
         <SectionTitle>Account</SectionTitle>

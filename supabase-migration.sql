@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE TABLE IF NOT EXISTS businesses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
+    business_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
     website VARCHAR(255),
@@ -73,6 +73,15 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Saved events table (user bookmarks)
+CREATE TABLE IF NOT EXISTS saved_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, event_id)
+);
+
 -- ============================================================
 -- STEP 2: Create Indexes for Performance
 -- ============================================================
@@ -88,6 +97,10 @@ CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name);
 CREATE INDEX IF NOT EXISTS idx_events_status_start ON events(status, start_time) WHERE status = 'published';
 CREATE INDEX IF NOT EXISTS idx_events_featured ON events(featured, status) WHERE featured = true AND status = 'published';
 
+-- Saved events indexes
+CREATE INDEX IF NOT EXISTS idx_saved_events_user ON saved_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_saved_events_event ON saved_events(event_id);
+
 -- ============================================================
 -- STEP 3: Enable Row Level Security (RLS)
 -- ============================================================
@@ -95,6 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_events_featured ON events(featured, status) WHERE
 ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE saved_events ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- STEP 4: RLS Policies for Businesses
@@ -209,6 +223,26 @@ CREATE POLICY "Only admins can delete categories"
     );
 
 -- ============================================================
+-- STEP 6b: RLS Policies for Saved Events
+-- ============================================================
+
+DROP POLICY IF EXISTS "Users can view their own saved events" ON saved_events;
+DROP POLICY IF EXISTS "Users can save events" ON saved_events;
+DROP POLICY IF EXISTS "Users can unsave events" ON saved_events;
+
+-- Users can only see their own saved events
+CREATE POLICY "Users can view their own saved events"
+    ON saved_events FOR SELECT USING (auth.uid() = user_id);
+
+-- Authenticated users can save events
+CREATE POLICY "Users can save events"
+    ON saved_events FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Users can delete only their own saves
+CREATE POLICY "Users can unsave events"
+    ON saved_events FOR DELETE USING (auth.uid() = user_id);
+
+-- ============================================================
 -- STEP 7: Create Functions and Triggers
 -- ============================================================
 
@@ -244,7 +278,7 @@ $$ language 'plpgsql';
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO businesses (user_id, name, email, event_count)
+    INSERT INTO businesses (user_id, business_name, email, event_count)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'business_name', 'My Business'),
@@ -339,7 +373,7 @@ SELECT
     tablename,
     rowsecurity
 FROM pg_tables
-WHERE tablename IN ('businesses', 'events', 'categories')
+WHERE tablename IN ('businesses', 'events', 'categories', 'saved_events')
 AND schemaname = 'public';
 
 -- Count policies per table
@@ -354,7 +388,7 @@ SELECT
     with_check
 FROM pg_policies
 WHERE schemaname = 'public'
-AND tablename IN ('businesses', 'events', 'categories')
+AND tablename IN ('businesses', 'events', 'categories', 'saved_events')
 ORDER BY tablename, policyname;
 
 -- ============================================================

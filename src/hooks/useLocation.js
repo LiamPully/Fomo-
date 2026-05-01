@@ -9,8 +9,31 @@ import {
   searchPlaces
 } from '../lib/location';
 
+const LOCATION_STORAGE_KEY = 'fomoza_user_location';
+
+const loadStoredLocation = () => {
+  try {
+    const raw = localStorage.getItem(LOCATION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveLocationToStorage = (loc) => {
+  try {
+    if (loc) {
+      localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(loc));
+    } else {
+      localStorage.removeItem(LOCATION_STORAGE_KEY);
+    }
+  } catch (e) {
+    console.warn('Failed to persist location:', e);
+  }
+};
+
 export const useLocation = () => {
-  const [location, setLocation] = useState(null);
+  const [location, setLocation] = useState(() => loadStoredLocation());
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState('prompt'); // 'prompt', 'granted', 'denied'
@@ -38,6 +61,7 @@ export const useLocation = () => {
     try {
       const position = await getCurrentPosition();
       setLocation(position);
+      saveLocationToStorage(position);
       setPermissionStatus('granted');
       return position;
     } catch (err) {
@@ -51,7 +75,9 @@ export const useLocation = () => {
 
   // Set location manually (e.g., from search)
   const setManualLocation = useCallback((lat, lng, name) => {
-    setLocation({ lat, lng, name });
+    const loc = { lat, lng, name };
+    setLocation(loc);
+    saveLocationToStorage(loc);
     setError(null);
     setPermissionStatus('granted');
   }, []);
@@ -59,6 +85,7 @@ export const useLocation = () => {
   // Clear location
   const clearLocation = useCallback(() => {
     setLocation(null);
+    saveLocationToStorage(null);
     setError(null);
   }, []);
 

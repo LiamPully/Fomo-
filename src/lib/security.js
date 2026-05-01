@@ -207,6 +207,46 @@ export const generateSecureToken = (length = 32) => {
 /**
  * Validates that an iframe source is from a trusted domain
  */
+/**
+ * Checks if input contains common XSS patterns
+ */
+export const containsXssPatterns = (input) => {
+  if (typeof input !== 'string') return false;
+  const dangerousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /on\w+\s*=/i,
+    /<iframe/i,
+    /<object/i,
+    /<embed/i,
+    /data:text\/html/i,
+    /vbscript:/i,
+    /expression\s*\(/i,
+  ];
+  return dangerousPatterns.some(pattern => pattern.test(input));
+};
+
+/**
+ * Validates a string with configurable rules
+ */
+export const validateString = (value, options = {}) => {
+  const { required = false, maxLength = Infinity, minLength = 0, allowedChars } = options;
+  if (required && (!value || !String(value).trim())) {
+    return { valid: false, error: 'Value is required' };
+  }
+  const str = String(value || '');
+  if (str.length < minLength) {
+    return { valid: false, error: `Value must be at least ${minLength} characters` };
+  }
+  if (str.length > maxLength) {
+    return { valid: false, error: `Value must be less than ${maxLength} characters` };
+  }
+  if (allowedChars && !allowedChars.test(str)) {
+    return { valid: false, error: 'Value contains invalid characters' };
+  }
+  return { valid: true, value: str };
+};
+
 export const isTrustedIframeSource = (url, trustedDomains = []) => {
   if (!url || typeof url !== 'string') return false;
 

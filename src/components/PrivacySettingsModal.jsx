@@ -1,11 +1,5 @@
 import { useState, useCallback, memo } from "react";
-
-const WHITE = "#FFFFFF";
-const BLACK = "#1A1A1A";
-const GRAY = "#5F6368";
-const GRAY_LIGHT = "#F1F3F4";
-const ACCENT = "#E85D3F";
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+import { WHITE, BLACK, GRAY, GRAY_LIGHT, ACCENT, FONT, SHADOW_CARD, OVERLAY_DARK } from "../lib/theme";
 
 // Toggle Switch Component
 const Toggle = ({ checked, onChange, label, description }) => {
@@ -39,7 +33,7 @@ const Toggle = ({ checked, onChange, label, description }) => {
             top: 3,
             left: checked ? 23 : 3,
             transition: "left 0.2s ease",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            boxShadow: "0 2px 4px SHADOW_CARD",
           }}
         />
       </button>
@@ -78,7 +72,7 @@ const PrivacySettingsModal = ({ open, onClose, user }) => {
         position: "fixed",
         inset: 0,
         zIndex: 300,
-        background: "rgba(0,0,0,0.5)",
+        background: OVERLAY_DARK,
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-end",
