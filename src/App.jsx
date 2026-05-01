@@ -1218,8 +1218,9 @@ const OurStorySection = memo(() => {
               alignItems: 'center',
               gap: 16,
               padding: 16,
-              background: 'rgba(255,255,255,0.05)',
+              background: 'rgba(255,255,255,0.10)',
               borderRadius: 16,
+              border: '1px solid rgba(255,255,255,0.06)',
               transform: isVisible ? 'translateX(0)' : 'translateX(-20px)',
               opacity: isVisible ? 1 : 0,
               transition: `all 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${index * 0.1}s`,
@@ -1237,7 +1238,7 @@ const OurStorySection = memo(() => {
               </h3>
               <p style={{
                 fontSize: 13,
-                color: DARK_TEXT_SECONDARY,
+                color: '#9AA0A6',
                 margin: 0,
               }}>
                 {value.desc}
@@ -3087,7 +3088,7 @@ export default function App() {
 
         {/* Main Content */}
         <main id="main-content" style={{
-          paddingBottom: 100,
+          paddingBottom: 'calc(120px + env(safe-area-inset-bottom))',
           minHeight: '100%',
           overflowY: 'visible',
           overflowX: 'hidden',
