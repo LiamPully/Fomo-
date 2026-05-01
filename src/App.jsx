@@ -1186,7 +1186,7 @@ const OurStorySection = memo(() => {
       <h2 style={{
         fontSize: 22,
         fontWeight: 700,
-        color: DARK_TEXT,
+        color: WHITE,
         marginBottom: 12,
       }}>
         Why We Built This
@@ -1194,7 +1194,7 @@ const OurStorySection = memo(() => {
       <p style={{
         fontSize: 15,
         lineHeight: 1.7,
-        color: DARK_TEXT_SECONDARY,
+        color: WHITE,
         marginBottom: 24,
       }}>
         We started this platform to bring people and communities closer together.
@@ -1231,14 +1231,14 @@ const OurStorySection = memo(() => {
               <h3 style={{
                 fontSize: 16,
                 fontWeight: 700,
-                color: DARK_TEXT,
+                color: WHITE,
                 marginBottom: 2,
               }}>
                 {value.title}
               </h3>
               <p style={{
                 fontSize: 13,
-                color: '#9AA0A6',
+                color: WHITE,
                 margin: 0,
               }}>
                 {value.desc}
