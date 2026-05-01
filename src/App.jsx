@@ -1269,27 +1269,20 @@ const HomeScreen = memo(({
   // Categories for pill buttons
   const categories = ['All', 'Music', 'Food', 'Sports', 'Markets', 'Nightlife', 'Arts', 'Community'];
 
-  // Get featured events (upcoming, horizontally scrollable)
-  const featuredEvents = useMemo(() => {
+  // All upcoming events — full horizontal scroll
+  const allEvents = useMemo(() => {
     return events
       .filter(e => e.status !== 'removed' && new Date(e.start) > new Date())
-      .sort((a, b) => new Date(a.start) - new Date(b.start))
-      .slice(0, 6);
+      .sort((a, b) => new Date(a.start) - new Date(b.start));
   }, [events]);
 
-  // Get events near you (up to 3)
-  const eventsNearYou = useMemo(() => {
-    return events
-      .filter(e => e.status !== 'removed' && new Date(e.start) > new Date())
-      .slice(0, 3);
-  }, [events]);
-
-  // Get popular this weekend
-  const popularThisWeekend = useMemo(() => {
-    return events
-      .filter(e => e.status !== 'removed' && new Date(e.start) > new Date())
-      .slice(0, 5);
-  }, [events]);
+  // Quick category filter (optional)
+ const filteredEvents = useMemo(() => {
+    if (activeCategory === 'All') return allEvents;
+    return allEvents.filter(e =>
+      (e.category || '').toLowerCase() === activeCategory.toLowerCase()
+    );
+  }, [allEvents, activeCategory]);
 
   // Use getUserFirstName for consistent first name extraction
   const userName = getUserFirstName(user);
@@ -1368,69 +1361,67 @@ const HomeScreen = memo(({
         </div>
       </div>
 
-      {/* Featured Events — horizontally scrollable */}
-      {featuredEvents.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
-          <SectionHeader title="Featured Events" onSeeAll={onSeeAllClick} delay={300} />
-          <div style={{
-            display: 'flex',
-            gap: 12,
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            paddingLeft: 20,
-            paddingRight: 20,
-            paddingBottom: 8,
-            WebkitOverflowScrolling: 'touch',
-          }}>
-            {featuredEvents.map((event, index) => (
-              <CompactEventCard
-                key={event.id}
-                event={event}
-                onClick={onEventClick}
-                delay={400 + (index * 80)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Categories Row */}
-      <div style={{ marginBottom: 28 }}>
-        <SectionHeader title="Categories" delay={400} />
+      {/* Category Filter Row */}
+      <div style={{ marginBottom: 20 }}>
         <div style={{
           display: 'flex',
-          gap: 10,
+          gap: 8,
           overflowX: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          paddingBottom: 8,
+          paddingBottom: 4,
           WebkitOverflowScrolling: 'touch',
         }}>
-          {categories.map((cat, index) => (
-            <DarkCategoryPill
+          {categories.map((cat) => (
+            <button
               key={cat}
-              label={cat}
-              isActive={activeCategory === cat}
               onClick={() => setActiveCategory(cat)}
-              delay={500 + (index * 50)}
-            />
+              style={{
+                padding: '8px 16px',
+                borderRadius: 999,
+                border: 'none',
+                fontSize: 14,
+                fontWeight: activeCategory === cat ? 600 : 500,
+                background: activeCategory === cat ? ACCENT : DARK_CARD,
+                color: activeCategory === cat ? WHITE : DARK_TEXT_SECONDARY,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+              }}
+            >
+              {cat}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Events Near You */}
-      <div style={{ marginBottom: 28 }}>
-        <SectionHeader title="Events Near You" onSeeAll={onSeeAllClick} delay={600} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {eventsNearYou.length > 0 ? (
-            eventsNearYou.map((event, index) => (
-              <EventCardWithAttendees
-                key={event.id}
-                event={event}
-                onClick={onEventClick}
-                delay={700 + (index * 100)}
-              />
+      {/* All Events — horizontally scrollable */}
+      <div style={{ marginBottom: 32 }}>
+        <SectionHeader
+          title={activeCategory === 'All' ? 'All Events' : `${activeCategory} Events`}
+          onSeeAll={onSeeAllClick}
+          delay={300}
+        />
+        <div style={{
+          display: 'flex',
+          gap: 12,
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          paddingBottom: 12,
+          WebkitOverflowScrolling: 'touch',
+          scrollSnapType: 'x mandatory',
+        }}>
+          {filteredEvents.length > 0 ? (
+            filteredEvents.map((event, index) => (
+              <div key={event.id} style={{ scrollSnapAlign: 'start', flexShrink: 0 }}>
+                <CompactEventCard
+                  event={event}
+                  onClick={onEventClick}
+                  delay={400 + (index * 60)}
+                />
+              </div>
             ))
           ) : (
             <div style={{
@@ -1438,45 +1429,19 @@ const HomeScreen = memo(({
               textAlign: 'center',
               background: DARK_CARD,
               borderRadius: 16,
+              width: '100%',
             }}>
               <p style={{ color: DARK_TEXT_SECONDARY, margin: 0 }}>
-                No events nearby
+                No upcoming events
               </p>
             </div>
           )}
+          <div style={{ flex: '0 0 8px' }} />
         </div>
       </div>
 
       {/* Our Story / About Section */}
       <OurStorySection />
-
-      {/* Popular This Weekend */}
-      <div style={{ marginBottom: 28 }}>
-        <SectionHeader title="Popular This Weekend" onSeeAll={onSeeAllClick} delay={800} />
-        <div style={{
-          display: 'flex',
-          gap: 12,
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          marginLeft: -20,
-          marginRight: -20,
-          paddingLeft: 20,
-          paddingRight: 20,
-          paddingBottom: 8,
-          WebkitOverflowScrolling: 'touch',
-        }}>
-          {popularThisWeekend.map((event, index) => (
-            <CompactEventCard
-              key={event.id}
-              event={event}
-              onClick={onEventClick}
-              delay={900 + (index * 80)}
-            />
-          ))}
-          <div style={{ flex: '0 0 16px' }} />
-        </div>
-      </div>
 
       {/* Footer / Bottom Padding */}
       <div style={{ height: 20 }} />
