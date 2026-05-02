@@ -11,6 +11,7 @@ import {
   BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ACCENT_LIGHT, FONT,
   SHADOW_CARD, SHADOW_CARD_HOVER, SHADOW_BUTTON, OVERLAY_DARK, ERROR, ERROR_LIGHT,
 } from "../lib/theme";
+import { safeLog } from "../lib/security";
 import "../styles/airbnb-inspired.css";
 
 // Icon component
@@ -134,14 +135,15 @@ const StepIndicator = memo(({ currentStep, totalSteps, stepLabels }) => {
 StepIndicator.displayName = "StepIndicator";
 
 // Form input components
-const FormInput = memo(({ inputRef, type = "text", placeholder, hasError, disabled = false, defaultValue = "", onBlur: externalOnBlur }) => {
+const FormInput = memo(({ inputRef, type = "text", placeholder, hasError, disabled = false, value = "", onChange, onBlur: externalOnBlur }) => {
   return (
     <input
       ref={inputRef}
       type={type}
       placeholder={placeholder}
       disabled={disabled}
-      defaultValue={defaultValue}
+      value={value}
+      onChange={onChange}
       autoComplete="off"
       style={{
         width: "100%",
@@ -173,14 +175,15 @@ const FormInput = memo(({ inputRef, type = "text", placeholder, hasError, disabl
 
 FormInput.displayName = "FormInput";
 
-const FormTextarea = memo(({ textareaRef, placeholder, hasError, disabled = false, defaultValue = "" }) => {
+const FormTextarea = memo(({ textareaRef, placeholder, hasError, disabled = false, value = "", onChange }) => {
   return (
     <textarea
       ref={textareaRef}
       placeholder={placeholder}
       rows={4}
       disabled={disabled}
-      defaultValue={defaultValue}
+      value={value}
+      onChange={onChange}
       style={{
         width: "100%",
         border: `1.5px solid ${hasError ? ACCENT : GRAY_LIGHT}`,
@@ -212,13 +215,14 @@ const FormTextarea = memo(({ textareaRef, placeholder, hasError, disabled = fals
 
 FormTextarea.displayName = "FormTextarea";
 
-const DateTimeInput = memo(({ inputRef, hasError, disabled = false, defaultValue = "" }) => {
+const DateTimeInput = memo(({ inputRef, hasError, disabled = false, value = "", onChange }) => {
   return (
     <input
       ref={inputRef}
       type="datetime-local"
       disabled={disabled}
-      defaultValue={defaultValue}
+      value={value}
+      onChange={onChange}
       style={{
         width: "100%",
         border: `1.5px solid ${hasError ? ACCENT : GRAY_LIGHT}`,
@@ -838,6 +842,12 @@ const CreateEvent = ({ user, onSave, onBack }) => {
   // Update form data helper
   const updateFormData = useCallback((updates) => {
     setFormData((prev) => ({ ...prev, ...updates }));
+    // Clear errors for updated fields so the user sees feedback immediately
+    setErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(updates).forEach((key) => delete next[key]);
+      return next;
+    });
   }, []);
 
   // Category change handler
@@ -971,7 +981,7 @@ const CreateEvent = ({ user, onSave, onBack }) => {
 
         await onSave(submitData);
       } catch (err) {
-        console.error("Save error:", err);
+        safeLog.error("Save error:", err);
         setErrors({ submit: "Failed to save event. Please try again." });
 
         if (uploadedImageData.length > 0) {
@@ -1019,8 +1029,8 @@ const CreateEvent = ({ user, onSave, onBack }) => {
         inputRef={titleRef}
         placeholder="e.g. Saturday Morning Market"
         hasError={!!errors.title}
-        defaultValue={formData.title}
-        onBlur={(e) => updateFormData({ title: e.target.value })}
+        value={formData.title}
+        onChange={(e) => updateFormData({ title: e.target.value })}
       />
       <ErrorMessage message={errors.title} />
 
@@ -1030,8 +1040,8 @@ const CreateEvent = ({ user, onSave, onBack }) => {
         textareaRef={descRef}
         placeholder="Tell people what to expect... What's happening? Who should come? What will they experience?"
         hasError={!!errors.desc}
-        defaultValue={formData.desc}
-        onBlur={(e) => updateFormData({ desc: e.target.value })}
+        value={formData.desc}
+        onChange={(e) => updateFormData({ desc: e.target.value })}
       />
       <ErrorMessage message={errors.desc} />
 
@@ -1141,8 +1151,8 @@ const CreateEvent = ({ user, onSave, onBack }) => {
           <DateTimeInput
             inputRef={startRef}
             hasError={!!errors.start}
-            defaultValue={formData.start}
-            onBlur={(e) => updateFormData({ start: e.target.value })}
+            value={formData.start}
+            onChange={(e) => updateFormData({ start: e.target.value })}
           />
           <ErrorMessage message={errors.start} />
         </div>
@@ -1151,8 +1161,8 @@ const CreateEvent = ({ user, onSave, onBack }) => {
           <DateTimeInput
             inputRef={endRef}
             hasError={!!errors.end}
-            defaultValue={formData.end}
-            onBlur={(e) => updateFormData({ end: e.target.value })}
+            value={formData.end}
+            onChange={(e) => updateFormData({ end: e.target.value })}
           />
           <ErrorMessage message={errors.end} />
         </div>
@@ -1163,8 +1173,8 @@ const CreateEvent = ({ user, onSave, onBack }) => {
       <FormInput
         inputRef={venueRef}
         placeholder="e.g. The Old Biscuit Mill"
-        defaultValue={formData.venue}
-        onBlur={(e) => updateFormData({ venue: e.target.value })}
+        value={formData.venue}
+        onChange={(e) => updateFormData({ venue: e.target.value })}
       />
 
       {/* Area */}
@@ -1173,8 +1183,8 @@ const CreateEvent = ({ user, onSave, onBack }) => {
         inputRef={areaRef}
         placeholder="e.g. Woodstock, Cape Town"
         hasError={!!errors.area}
-        defaultValue={formData.area}
-        onBlur={(e) => updateFormData({ area: e.target.value })}
+        value={formData.area}
+        onChange={(e) => updateFormData({ area: e.target.value })}
       />
       <ErrorMessage message={errors.area} />
     </div>
@@ -1236,8 +1246,8 @@ const CreateEvent = ({ user, onSave, onBack }) => {
           type="tel"
           placeholder="+27 82 000 0000"
           hasError={!!errors.phone}
-          defaultValue={formData.phone}
-          onBlur={(e) => updateFormData({ phone: e.target.value })}
+          value={formData.phone}
+          onChange={(e) => updateFormData({ phone: e.target.value })}
         />
         <ErrorMessage message={errors.phone} />
 
@@ -1247,8 +1257,8 @@ const CreateEvent = ({ user, onSave, onBack }) => {
           type="tel"
           placeholder="+27 82 000 0000"
           hasError={!!errors.wa}
-          defaultValue={formData.wa}
-          onBlur={(e) => updateFormData({ wa: e.target.value })}
+          value={formData.wa}
+          onChange={(e) => updateFormData({ wa: e.target.value })}
         />
         <ErrorMessage message={errors.wa} />
 
@@ -1257,16 +1267,16 @@ const CreateEvent = ({ user, onSave, onBack }) => {
           inputRef={webRef}
           type="url"
           placeholder="yoursite.co.za"
-          defaultValue={formData.web}
-          onBlur={(e) => updateFormData({ web: e.target.value })}
+          value={formData.web}
+          onChange={(e) => updateFormData({ web: e.target.value })}
         />
 
         <FieldLabel>Instagram</FieldLabel>
         <FormInput
           inputRef={igRef}
           placeholder="@yourbusiness"
-          defaultValue={formData.ig}
-          onBlur={(e) => updateFormData({ ig: e.target.value })}
+          value={formData.ig}
+          onChange={(e) => updateFormData({ ig: e.target.value })}
         />
       </div>
 
