@@ -4,9 +4,10 @@ import { useAuth } from "./hooks/useAuth";
 import { useScrollPosition } from "./hooks/useScrollPosition";
 import { MAIN_CATEGORIES, getCategoryColor } from "./lib/categories";
 import { getEventCover } from "./lib/covers";
-import { fetchEvents, createEvent, updateEvent, deleteEvent } from "./api/events";
+import { fetchEvents, createEvent, updateEvent, deleteEvent, toggleSaveEvent, fetchSavedEvents } from "./api/events";
 import { canPublishEvent } from "./api/businesses";
 import { calculateDistance } from "./lib/location";
+import { safeLog } from "./lib/security";
 import {
   BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ACCENT_LIGHT, FONT,
   SHADOW_CARD, SHADOW_CARD_HOVER, SHADOW_BUTTON, SHADOW_NAV, SHADOW_SM,
@@ -24,6 +25,7 @@ import AccountScreen from "./components/AccountScreen";
 import EditProfileModal from "./components/EditProfileModal";
 import PrivacySettingsModal from "./components/PrivacySettingsModal";
 import NotificationPreferencesModal from "./components/NotificationPreferencesModal";
+import EmailVerificationBanner from "./components/EmailVerificationBanner";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./styles/airbnb-inspired.css";
 
@@ -302,13 +304,9 @@ const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions, animati
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <img
-            src={getEventCover(event)}
-            alt={event.title}
-            loading="lazy"
-            decoding="async"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
+          <div style={{ width: '100%', height: '100%', background: GRAY_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={GRAY} strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5" fill={GRAY}/><path d="M21 15l-5-5L5 21"/></svg>
+          </div>
         )}
         {event.today && (
           <div style={{
@@ -331,7 +329,7 @@ const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions, animati
         {event.status === 'draft' && (
           <div style={{
             position: 'absolute',
-            top: 12,
+            top: event.today ? 44 : 12,
             left: 12,
             background: GRAY,
             color: WHITE,
@@ -364,7 +362,7 @@ const EventCard = memo(({ event, onClick, onEdit, onDelete, showActions, animati
           {event.category}
         </div>
 
-        <h3 style={{
+        <h3 title={event.title} style={{
           fontSize: 16,
           fontWeight: 700,
           color: BLACK,
@@ -590,6 +588,7 @@ const HorizontalEventCard = memo(({ event, onClick, animationDelay = 0 }) => {
       {/* Content */}
       <div style={{ padding: '14px' }}>
         <h3
+          title={event.title}
           style={{
             fontSize: 16,
             fontWeight: 700,
@@ -869,7 +868,7 @@ const FeaturedEventCard = memo(({ event, onClick }) => {
 
       {/* Content */}
       <div style={{ padding: '20px' }}>
-        <h3 style={{
+        <h3 title={event.title} style={{
           fontSize: 20,
           fontWeight: 700,
           color: DARK_TEXT,
@@ -958,7 +957,7 @@ const CompactEventCard = memo(({ event, onClick, delay = 0 }) => {
         </div>
       </div>
       <div style={{ padding: '12px' }}>
-        <h4 style={{
+        <h4 title={event.title} style={{
           fontSize: 13,
           fontWeight: 600,
           color: DARK_TEXT,
@@ -1039,7 +1038,7 @@ const EventCardWithAttendees = memo(({ event, onClick, delay = 0 }) => {
         }}>
           {event.category}
         </div>
-        <h4 style={{
+        <h4 title={event.title} style={{
           fontSize: 15,
           fontWeight: 600,
           color: LIGHT_THEME.textPrimary,
@@ -1172,7 +1171,7 @@ const OurStorySection = memo(() => {
     <div
       id="our-story"
       style={{
-        background: `linear-gradient(135deg, ${DARK_CARD} 0%, #1E1E3A 100%)`,
+        background: WHITE,
         borderRadius: 24,
         padding: 28,
         marginTop: 32,
@@ -1186,7 +1185,7 @@ const OurStorySection = memo(() => {
       <h2 style={{
         fontSize: 22,
         fontWeight: 700,
-        color: WHITE,
+        color: DARK_TEXT,
         marginBottom: 12,
       }}>
         Why We Built This
@@ -1194,7 +1193,7 @@ const OurStorySection = memo(() => {
       <p style={{
         fontSize: 15,
         lineHeight: 1.7,
-        color: WHITE,
+        color: DARK_TEXT_SECONDARY,
         marginBottom: 24,
       }}>
         We started this platform to bring people and communities closer together.
@@ -1218,9 +1217,9 @@ const OurStorySection = memo(() => {
               alignItems: 'center',
               gap: 16,
               padding: 16,
-              background: 'rgba(255,255,255,0.10)',
+              background: GRAY_LIGHT,
               borderRadius: 16,
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: `1px solid ${LIGHT_THEME.border}`,
               transform: isVisible ? 'translateX(0)' : 'translateX(-20px)',
               opacity: isVisible ? 1 : 0,
               transition: `all 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${index * 0.1}s`,
@@ -1231,14 +1230,14 @@ const OurStorySection = memo(() => {
               <h3 style={{
                 fontSize: 16,
                 fontWeight: 700,
-                color: WHITE,
+                color: DARK_TEXT,
                 marginBottom: 2,
               }}>
                 {value.title}
               </h3>
               <p style={{
                 fontSize: 13,
-                color: WHITE,
+                color: DARK_TEXT_SECONDARY,
                 margin: 0,
               }}>
                 {value.desc}
@@ -1266,9 +1265,6 @@ const HomeScreen = memo(({
 }) => {
   const [activeCategory, setActiveCategory] = useState('All');
 
-  // Categories for pill buttons
-  const categories = ['All', 'Music', 'Food', 'Sports', 'Markets', 'Nightlife', 'Arts', 'Community'];
-
   // All upcoming events — full horizontal scroll
   const allEvents = useMemo(() => {
     return events
@@ -1276,11 +1272,18 @@ const HomeScreen = memo(({
       .sort((a, b) => new Date(a.start) - new Date(b.start));
   }, [events]);
 
+  // Categories for pill buttons — derived from actual event data
+  const categories = useMemo(() => {
+    const cats = new Set(allEvents.map(e => e.category).filter(Boolean));
+    return ['All', ...Array.from(cats).slice(0, 6)];
+  }, [allEvents]);
+
   // Quick category filter (optional)
- const filteredEvents = useMemo(() => {
+  const filteredEvents = useMemo(() => {
     if (activeCategory === 'All') return allEvents;
+    const cat = activeCategory.toLowerCase();
     return allEvents.filter(e =>
-      (e.category || '').toLowerCase() === activeCategory.toLowerCase()
+      (e.category || '').toLowerCase().includes(cat)
     );
   }, [allEvents, activeCategory]);
 
@@ -1492,7 +1495,7 @@ const LocationPickerModal = memo(({
           setPredictions(result.predictions.slice(0, 5));
         }
       } catch (err) {
-        console.error('Search error:', err);
+        safeLog.error('Search error:', err);
       } finally {
         setIsLoading(false);
       }
@@ -1524,7 +1527,7 @@ const LocationPickerModal = memo(({
         onClose();
       }
     } catch (err) {
-      console.error('Geocoding error:', err);
+      safeLog.error('Geocoding error:', err);
     }
   };
 
@@ -1958,7 +1961,7 @@ const CalendarEventCard = memo(({ event, onClick, animationDelay = 0 }) => {
         }}>
           {event.category}
         </div>
-        <h4 style={{
+        <h4 title={event.title} style={{
           fontSize: 14,
           fontWeight: 700,
           color: BLACK,
@@ -2091,6 +2094,22 @@ const CalendarScreen = memo(({
         marginBottom: 24,
         animation: 'fadeInUp 0.22s ease-out'
       }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 8,
+          }}
+          aria-label="Go back"
+        >
+          <Icon name="arrowLeft" size={24} color={BLACK} />
+        </button>
         <h1 style={{ fontSize: 26, fontWeight: 800, color: BLACK, letterSpacing: '-0.5px' }}>
           Events Calendar
         </h1>
@@ -2651,7 +2670,7 @@ const MyEventsScreen = ({ events, businessId, onBack, onCreate, onEdit, onDelete
               margin: '0 auto 20px',
               fontSize: 40,
             }}>
-
+              📭
             </div>
             <p style={{ fontSize: 18, fontWeight: 700, color: BLACK, marginBottom: 8 }}>
               {activeFilter === 'all' ? 'No events yet' : `No ${activeFilter} events`}
@@ -2686,16 +2705,8 @@ const MyEventsScreen = ({ events, businessId, onBack, onCreate, onEdit, onDelete
   );
 };
 
-// Favourites helpers (localStorage-backed)
-const FAVOURITES_KEY = 'fomoza_favourites';
-const loadFavourites = () => {
-  try { return new Set(JSON.parse(localStorage.getItem(FAVOURITES_KEY) || '[]')); }
-  catch { return new Set(); }
-};
-const saveFavourites = (set) => {
-  try { localStorage.setItem(FAVOURITES_KEY, JSON.stringify([...set])); }
-  catch (e) { console.warn('Failed to save favourites', e); }
-};
+// Favourites helpers (Supabase-backed)
+const loadSavedEventIds = (savedEvents) => new Set((savedEvents || []).map(e => e.id));
 
 // Main App
 export default function App() {
@@ -2703,7 +2714,8 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [favouriteIds, setFavouriteIds] = useState(() => loadFavourites());
+  const [favouriteIds, setFavouriteIds] = useState(new Set());
+  const [savedEvents, setSavedEvents] = useState([]);
   const [showLoc, setShowLoc] = useState(true);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [locLabel, setLocLabel] = useState(null);
@@ -2716,6 +2728,14 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [notification, setNotification] = useState(null);
+  const notificationTimeoutRef = useRef(null);
+  const notify = useCallback((type, message, duration = 3000) => {
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+    }
+    setNotification({ type, message });
+    notificationTimeoutRef.current = setTimeout(() => setNotification(null), duration);
+  }, []);
 
   // Debounce search query
   useEffect(() => {
@@ -2724,7 +2744,7 @@ export default function App() {
   }, [searchQuery]);
   const [pageTransition, setPageTransition] = useState('idle');
 
-  const { user, business, loading: authLoading, error: authError, signUp, signIn, signOut, refreshBusiness, clearError } = useAuth();
+  const { user, business, loading: authLoading, error: authError, signUp, signIn, signOut, refreshBusiness, refreshUser, deleteAccount, clearError } = useAuth();
 
 
 
@@ -2787,19 +2807,43 @@ export default function App() {
     setCat(newFilters.category);
   }, []);
 
+  // Fetch saved events from Supabase when user logs in
+  useEffect(() => {
+    if (!user) {
+      setFavouriteIds(new Set());
+      setSavedEvents([]);
+      return;
+    }
+    fetchSavedEvents().then(({ data, error }) => {
+      if (!error && data) {
+        setSavedEvents(data);
+        setFavouriteIds(loadSavedEventIds(data));
+      }
+    });
+  }, [user]);
+
   // Toggle favourite for an event
-  const handleToggleFavourite = useCallback((eventId) => {
+  const handleToggleFavourite = useCallback(async (eventId) => {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+    const { data, error } = await toggleSaveEvent(eventId);
+    if (error) return;
     setFavouriteIds(prev => {
       const next = new Set(prev);
-      if (next.has(eventId)) {
-        next.delete(eventId);
-      } else {
+      if (data?.saved) {
         next.add(eventId);
+      } else {
+        next.delete(eventId);
       }
-      saveFavourites(next);
       return next;
     });
-  }, []);
+    // Refresh saved events list
+    fetchSavedEvents().then(({ data: refreshed }) => {
+      if (refreshed) setSavedEvents(refreshed);
+    });
+  }, [user]);
 
   // Events enriched with isFavorite flag
   const enrichedEvents = useMemo(() => {
@@ -2836,6 +2880,16 @@ export default function App() {
         return distA - distB;
       });
     }
+
+    // Apply radius filter when location is set and a reasonable radius is chosen
+    if (location?.lat && radiusKm > 0 && radiusKm < 5000) {
+      return sorted.filter(e => {
+        if (!e.latitude || !e.longitude) return false;
+        const dist = calculateDistance(location.lat, location.lng, e.latitude, e.longitude);
+        return dist <= radiusKm;
+      });
+    }
+
     return sorted;
   }, [enrichedEvents, cat, sortBy, debouncedSearchQuery, location]);
 
@@ -2893,7 +2947,7 @@ export default function App() {
 
     const { data, error } = await createEvent(eventData);
     if (error) {
-      setNotification({ type: 'error', message: error.message });
+      notify('error', error.message);
       return;
     }
 
@@ -2919,8 +2973,7 @@ export default function App() {
         user_id: data.user_id,
       };
       setEvents(prev => [newEvent, ...prev]);
-      setNotification({ type: 'success', message: 'Event created successfully!' });
-      setTimeout(() => setNotification(null), 3000);
+      notify('success', 'Event created successfully!', 3000);
     }
 
     setShowCreate(false);
@@ -2929,24 +2982,28 @@ export default function App() {
   const handleDeleteEvent = useCallback(async (event) => {
     const { error } = await deleteEvent(event.id);
     if (error) {
-      setNotification({ type: 'error', message: 'Failed to delete event' });
+      notify('error', 'Failed to delete event');
       return;
     }
     setEvents(prev => prev.filter(e => e.id !== event.id));
-    setNotification({ type: 'success', message: 'Event deleted successfully' });
-    setTimeout(() => setNotification(null), 3000);
+    notify('success', 'Event deleted successfully', 3000);
   }, []);
+
+  const tabTransitionRef = useRef(null);
 
   const handleTab = useCallback((t) => {
     if (t === "profile" && !user) {
       setShowAuth(true);
       return;
     }
+    if (tabTransitionRef.current) {
+      clearTimeout(tabTransitionRef.current);
+    }
     setPageTransition('exiting');
-    setTimeout(() => {
+    tabTransitionRef.current = setTimeout(() => {
       setTab(t);
       setPageTransition('entering');
-      setTimeout(() => setPageTransition('idle'), 220);
+      tabTransitionRef.current = setTimeout(() => setPageTransition('idle'), 220);
     }, 150);
   }, [user]);
 
@@ -2985,20 +3042,20 @@ export default function App() {
   }, []);
 
   const handleShareEvent = useCallback(async (event) => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?event=${event.id}`;
     if (navigator.share) {
       try {
         await navigator.share({
           title: event.title,
           text: `Check out ${event.title} on FOMO ZA`,
-          url: window.location.href,
+          url: shareUrl,
         });
       } catch (err) {
         // User cancelled or failed
       }
     } else {
-      navigator.clipboard?.writeText(window.location.href);
-      setNotification({ type: 'success', message: 'Link copied to clipboard!' });
-      setTimeout(() => setNotification(null), 2000);
+      navigator.clipboard?.writeText(shareUrl);
+      notify('success', 'Link copied to clipboard!', 2000);
     }
   }, []);
 
@@ -3120,6 +3177,21 @@ export default function App() {
               transform: pageTransition === 'exiting' ? 'translateY(12px)' : pageTransition === 'entering' ? 'translateY(0)' : 'translateY(0)',
               transition: 'opacity 0.22s ease-out, transform 0.22s ease-out',
             }}>
+              {user && !user.email_confirmed_at && (
+                <div style={{ padding: '20px 20px 0' }}>
+                  <EmailVerificationBanner
+                    email={user.email}
+                    onResend={async () => {
+                      const { error } = await supabase.auth.resend({
+                        type: 'signup',
+                        email: user.email,
+                      });
+                      return { success: !error };
+                    }}
+                    onDismiss={() => {}}
+                  />
+                </div>
+              )}
               <AccountScreen
                 user={appUser}
                 events={events}
@@ -3136,6 +3208,13 @@ export default function App() {
                 onNotificationPrefs={() => setShowNotificationPrefs(true)}
                 onSignIn={() => setShowAuth(true)}
                 onSignOut={handleSignOut}
+                onDeleteAccount={async () => {
+                  const result = await deleteAccount();
+                  if (result.success) {
+                    setTab("home");
+                  }
+                  return result;
+                }}
                 onEditLocation={() => setShowLocationPicker(true)}
                 loading={authLoading}
               />
@@ -3234,14 +3313,21 @@ export default function App() {
               </button>
 
               {/* Event Image */}
-              <div style={{ height: 280, background: GRAY_LIGHT }}>
+              <div style={{ height: 280, background: GRAY_LIGHT, position: 'relative' }}>
                 <img
                   src={selectedEvent.img}
                   alt={selectedEvent.title}
                   loading="eager"
                   decoding="async"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
+                <div style={{ position: 'absolute', inset: 0, display: 'none', alignItems: 'center', justifyContent: 'center', background: GRAY_LIGHT }}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={GRAY} strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5" fill={GRAY}/><path d="M21 15l-5-5L5 21"/></svg>
+                </div>
               </div>
 
               {/* Event Content */}
@@ -3494,8 +3580,7 @@ export default function App() {
               setShowCreate(true);
             }}
             onEdit={(event) => {
-              setNotification({ type: 'info', message: 'Edit feature coming soon!' });
-              setTimeout(() => setNotification(null), 2000);
+              notify('info', 'Edit feature coming soon!', 2000);
             }}
             onDelete={handleDeleteEvent}
             loading={eventsLoading}
@@ -3516,7 +3601,10 @@ export default function App() {
           open={showEditProfile}
           onClose={() => setShowEditProfile(false)}
           user={appUser}
-          onProfileUpdated={refreshBusiness}
+          onProfileUpdated={() => {
+            refreshBusiness();
+            refreshUser();
+          }}
         />
 
         <PrivacySettingsModal
