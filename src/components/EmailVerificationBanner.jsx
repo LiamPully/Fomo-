@@ -5,17 +5,8 @@ import {
 
 /**
  * EmailVerificationBanner - Reminds users to verify their email
- *
- * Features:
- * - Shows when email is not verified
- * - Resend verification email functionality
- * - Dismissible
- * - Loading state for resend action
  */
 
-/**
- * Email icon
- */
 const EmailIcon = memo(() => (
   <svg
     width="20"
@@ -34,9 +25,6 @@ const EmailIcon = memo(() => (
 
 EmailIcon.displayName = 'EmailIcon';
 
-/**
- * Check icon
- */
 const CheckIcon = memo(() => (
   <svg
     width="16"
@@ -54,9 +42,6 @@ const CheckIcon = memo(() => (
 
 CheckIcon.displayName = 'CheckIcon';
 
-/**
- * X icon for dismiss button
- */
 const XIcon = memo(() => (
   <svg
     width="16"
@@ -75,9 +60,6 @@ const XIcon = memo(() => (
 
 XIcon.displayName = 'XIcon';
 
-/**
- * Loading spinner
- */
 const LoadingSpinner = memo(() => (
   <div
     style={{
@@ -88,20 +70,11 @@ const LoadingSpinner = memo(() => (
       borderRadius: '50%',
       animation: 'spin 0.8s linear infinite',
     }}
-  >
-    <style>{`
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    `}</style>
-  </div>
+  />
 ));
 
 LoadingSpinner.displayName = 'LoadingSpinner';
 
-/**
- * EmailVerificationBanner component
- */
 const EmailVerificationBanner = memo(({
   email,
   onResend,
@@ -125,10 +98,9 @@ const EmailVerificationBanner = memo(({
     }
   }, [onResend]);
 
-  // Calculate cooldown remaining
   const getCooldownRemaining = () => {
     if (!lastSentTime) return 0;
-    const cooldownMs = 60000; // 1 minute cooldown
+    const cooldownMs = 60000;
     const elapsed = Date.now() - lastSentTime;
     return Math.max(0, Math.ceil((cooldownMs - elapsed) / 1000));
   };
@@ -137,6 +109,27 @@ const EmailVerificationBanner = memo(({
   const canResend = !isSending && cooldownRemaining === 0;
 
   if (isDismissed) return null;
+
+  let buttonContent;
+  if (isSending) {
+    buttonContent = (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+        <LoadingSpinner />
+        <span>Sending...</span>
+      </span>
+    );
+  } else if (showSuccess) {
+    buttonContent = (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+        <CheckIcon />
+        <span>Sent!</span>
+      </span>
+    );
+  } else if (cooldownRemaining > 0) {
+    buttonContent = <span>Resend in {cooldownRemaining}s</span>;
+  } else {
+    buttonContent = <span>Resend email</span>;
+  }
 
   return (
     <div
@@ -156,7 +149,6 @@ const EmailVerificationBanner = memo(({
           alignItems: 'flex-start',
         }}
       >
-        {/* Icon */}
         <div
           style={{
             flexShrink: 0,
@@ -173,7 +165,6 @@ const EmailVerificationBanner = memo(({
           <EmailIcon />
         </div>
 
-        {/* Content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <h4
             style={{
@@ -200,7 +191,6 @@ const EmailVerificationBanner = memo(({
             the verification link to complete your registration.
           </p>
 
-          {/* Actions */}
           <div
             style={{
               display: 'flex',
@@ -228,25 +218,10 @@ const EmailVerificationBanner = memo(({
                 opacity: canResend && !isSending ? 1 : 0.7,
               }}
             >
-              {isSending ? (
-                <>
-                  <LoadingSpinner />
-                  <span>Sending...\u003c/span>
-                </>
-              ) : showSuccess ? (
-                <>
-                  <CheckIcon />
-                  <span>Sent!\u003c/span>
-                </>
-              ) : cooldownRemaining > 0 ? (
-                <span>Resend in {cooldownRemaining}s\u003c/span>
-              ) : (
-                <span>Resend email\u003c/span>
-              )}
+              {buttonContent}
             </button>
           </div>
 
-          {/* Success message */}
           {showSuccess && (
             <div
               style={{
@@ -260,18 +235,11 @@ const EmailVerificationBanner = memo(({
                 animation: 'fadeIn 0.2s ease',
               }}
             >
-              <style>{`
-                @keyframes fadeIn {
-                  from { opacity: 0; transform: translateY(-4px); }
-                  to { opacity: 1; transform: translateY(0); }
-                }
-              `}</style>
               Verification email sent! Please check your inbox.
             </div>
           )}
         </div>
 
-        {/* Dismiss button */}
         <button
           onClick={handleDismiss}
           aria-label="Dismiss"
