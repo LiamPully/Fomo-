@@ -955,11 +955,13 @@ const CreateEvent = ({ user, onSave, onBack }) => {
           );
 
           if (uploadErrors.length > 0) {
-            // Warn but don't block — the storage bucket may not be configured yet
-            const isBucketMissing = uploadErrors[0]?.error?.toLowerCase().includes('bucket');
+            // Warn but don't block — storage bucket or RLS permissions may be missing
+            const errText = uploadErrors[0]?.error?.toLowerCase() || '';
+            const isBucketIssue = errText.includes('bucket') || errText.includes('not found');
+            const isRLS = errText.includes('row level security') || errText.includes('policy') || errText.includes('permission');
             setErrors({
-              submit: isBucketMissing
-                ? 'Image storage is not configured yet. Your event will be published without images — you can add them later.'
+              submit: isBucketIssue || isRLS
+                ? 'Images couldn\'t be uploaded — the storage bucket needs RLS policies enabled (INSERT for authenticated users). Event will be published without images.'
                 : `Some images failed to upload (${uploadErrors.length}). Event will be published without them.`,
             });
             // Continue to publish without images
