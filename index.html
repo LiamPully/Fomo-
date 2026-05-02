@@ -1,53 +1,35 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- AGGRESSIVE extension error suppression -->
+    <!-- Production-safe extension error filtering -->
     <script>
     (function(){
-      var blockedPatterns = [
-        'runtime.lastError','content_script','content.js','read.js','lockdown-install',
-        'Sentry','sentry.io','429','insights whitelist','UsernameElement',
-        'Host validation failed','Host is not supported','SES Removing',
-        'unpermitted intrinsics','FrameDoesNotExist','FrameIsBrowserFrame',
-        'DelayedMessageSender','TabMonitor','background.js','kins_content',
-        'processInputEvent','Cannot read properties of null'
-      ];
-      var blockedUrls = ['sentry.io','chrome-extension','moz-extension','safari-extension'];
+      // Only filter known extension noise in development; never suppress in production
+      if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
 
-      function shouldBlock(args) {
+      var blockedPatterns = [
+        'runtime.lastError','content_script','chrome-extension','moz-extension',
+        'safari-extension','Sentry','sentry.io'
+      ];
+
+      function isExtensionNoise(args) {
         var str = Array.from(args).map(function(a){return String(a)}).join(' ');
         return blockedPatterns.some(function(p){return str.includes(p)});
       }
 
       var origError = console.error;
-      var origWarn = console.warn;
-      var origLog = console.log;
-      var origInfo = console.info;
-
-      console.error = function(){ if(!shouldBlock(arguments)) origError.apply(console,arguments); };
-      console.warn = function(){ if(!shouldBlock(arguments)) origWarn.apply(console,arguments); };
-      console.log = function(){ if(!shouldBlock(arguments)) origLog.apply(console,arguments); };
-      console.info = function(){ if(!shouldBlock(arguments)) origInfo.apply(console,arguments); };
-
-      window.onerror = function(){ return true; };
-      window.onunhandledrejection = function(e){ e.preventDefault(); return true; };
-
-      window.addEventListener('error', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
-      window.addEventListener('unhandledrejection', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
-
-      // Block fetch to sentry
-      var origFetch = window.fetch;
-      window.fetch = function(url,opts){
-        var urlStr = String(url);
-        if(blockedUrls.some(function(u){return urlStr.includes(u)})){
-          return Promise.resolve(new Response('{}',{status:200}));
-        }
-        return origFetch.apply(this,arguments);
+      console.error = function(){
+        if (!isExtensionNoise(arguments)) origError.apply(console, arguments);
       };
     })();
     </script>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icon-192x192.svg" />
+
+    <!-- Google Fonts: Syne + Manrope -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <!-- Viewport for fullscreen PWA with address bar hide on scroll -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
@@ -59,6 +41,17 @@
     <!-- App description -->
     <meta name="description" content="Discover local markets, events and happenings near you" />
     <meta name="apple-mobile-web-app-title" content="Fomo" />
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fomo — Discover Local Events" />
+    <meta property="og:description" content="Discover local markets, events and happenings near you" />
+    <meta property="og:image" content="/icon-512x512.svg" />
+    <meta property="og:url" content="https://fomoza.app" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Fomo — Discover Local Events" />
+    <meta name="twitter:description" content="Discover local markets, events and happenings near you" />
+    <meta name="twitter:image" content="/icon-512x512.svg" />
 
     <title>Fomo</title>
 
@@ -89,7 +82,7 @@
     <meta name="display-mode" content="standalone" />
 
     <!-- Safari Pinned Tab -->
-    <link rel="mask-icon" href="/vite.svg" color="#C75B39" />
+    <link rel="mask-icon" href="/icon-192x192.svg" color="#C75B39" />
 
     <style>
       /* Reset and base styles */
