@@ -956,13 +956,10 @@ const CreateEvent = ({ user, onSave, onBack }) => {
 
           if (uploadErrors.length > 0) {
             // Warn but don't block — storage bucket or RLS permissions may be missing
-            const errText = uploadErrors[0]?.error?.toLowerCase() || '';
-            const isBucketIssue = errText.includes('bucket') || errText.includes('not found');
-            const isRLS = errText.includes('row level security') || errText.includes('policy') || errText.includes('permission');
+            const firstErr = uploadErrors[0]?.error || '';
+            console.error('[CreateEvent] Upload errors:', uploadErrors);
             setErrors({
-              submit: isBucketIssue || isRLS
-                ? 'Images couldn\'t be uploaded — the storage bucket needs RLS policies enabled (INSERT for authenticated users). Event will be published without images.'
-                : `Some images failed to upload (${uploadErrors.length}). Event will be published without them.`,
+              submit: 'Images couldn\'t be uploaded. Check Supabase Storage → Policies for bucket "event-images": ensure INSERT (authenticated) and SELECT (anon) policies exist. Event will publish without images.',
             });
             // Continue to publish without images
           } else {

@@ -196,7 +196,10 @@ export const uploadImage = async (file, eventId, onProgress = () => {}) => {
         upsert: false,
       });
 
-    if (mainError) throw mainError;
+    if (mainError) {
+      console.error('[Storage] Upload failed:', mainError.message, mainError);
+      throw mainError;
+    }
 
     onProgress(60);
 
