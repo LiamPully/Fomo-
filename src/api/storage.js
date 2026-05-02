@@ -7,6 +7,8 @@ import { validateFileUpload, safeLog } from '../lib/security';
  */
 
 const STORAGE_BUCKET = 'event-images';
+// NOTE: This bucket must be created in the Supabase dashboard.
+// Go to Storage → New Bucket → name it 'event-images', set to Public.
 const MAX_WIDTH = 1200;
 const THUMB_WIDTH = 400;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB

@@ -941,7 +941,7 @@ const CreateEvent = ({ user, onSave, onBack }) => {
       let uploadedImageData = [];
 
       try {
-        // Upload images
+        // Upload images (non-blocking — event still publishes if upload fails)
         const pendingImages = formData.images.filter((img) => img.status === "pending");
 
         if (pendingImages.length > 0) {
@@ -955,13 +955,17 @@ const CreateEvent = ({ user, onSave, onBack }) => {
           );
 
           if (uploadErrors.length > 0) {
-            setErrors({ submit: `Failed to upload ${uploadErrors.length} image(s). ${uploadErrors[0]?.error || ""}` });
-            setIsSubmitting(false);
-            setIsUploading(false);
-            return;
+            // Warn but don't block — the storage bucket may not be configured yet
+            const isBucketMissing = uploadErrors[0]?.error?.toLowerCase().includes('bucket');
+            setErrors({
+              submit: isBucketMissing
+                ? 'Image storage is not configured yet. Your event will be published without images — you can add them later.'
+                : `Some images failed to upload (${uploadErrors.length}). Event will be published without them.`,
+            });
+            // Continue to publish without images
+          } else {
+            uploadedImageData = uploaded;
           }
-
-          uploadedImageData = uploaded;
         }
 
         // Include already uploaded images
