@@ -1141,121 +1141,6 @@ const SectionHeader = memo(({ title, onSeeAll, delay = 0 }) => {
 
 SectionHeader.displayName = 'SectionHeader';
 
-// Typography Specimen — Brand Identity Card
-const TypographySpecimen = memo(() => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setIsVisible(true);
-      },
-      { threshold: 0.2 }
-    );
-    const el = document.getElementById('typography-specimen');
-    if (el) observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  const tagStyle = {
-    fontFamily: "'Manrope', monospace",
-    fontSize: 11,
-    fontWeight: 500,
-    color: '#5F6368',
-    background: '#F8F9FA',
-    border: '1px solid rgba(0,0,0,0.08)',
-    borderRadius: 999,
-    padding: '5px 12px',
-    whiteSpace: 'nowrap',
-  };
-
-  return (
-    <div
-      id="typography-specimen"
-      style={{
-        background: WHITE,
-        borderRadius: 24,
-        padding: 36,
-        marginTop: 32,
-        boxShadow: SHADOW_CARD_HOVER,
-        transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
-        opacity: isVisible ? 1 : 0,
-        transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-      }}
-    >
-      {/* Accent bar */}
-      <div
-        style={{
-          width: 32,
-          height: 3,
-          background: '#E85D26',
-          borderRadius: 2,
-          marginBottom: 20,
-        }}
-      />
-
-      {/* Display text */}
-      <h2
-        style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: 56,
-          fontWeight: 800,
-          color: '#1A1A1A',
-          letterSpacing: '-0.03em',
-          lineHeight: 1.05,
-          margin: '0 0 16px 0',
-        }}
-      >
-        Fomoza
-      </h2>
-
-      {/* Body text */}
-      <p
-        style={{
-          fontFamily: "'Manrope', sans-serif",
-          fontSize: 15,
-          fontWeight: 300,
-          color: '#5F6368',
-          lineHeight: 1.7,
-          margin: '0 0 28px 0',
-          maxWidth: 380,
-        }}
-      >
-        Discover the events that move you — from rooftop concerts
-        to underground art shows. Your next unforgettable night starts here.
-      </p>
-
-      {/* Vibe badge */}
-      <div
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          background: '#FFF0EA',
-          color: '#E85D26',
-          fontFamily: "'Manrope', sans-serif",
-          fontSize: 12,
-          fontWeight: 700,
-          padding: '6px 14px',
-          borderRadius: 999,
-          marginBottom: 28,
-        }}
-      >
-        Bold & Modern
-      </div>
-
-      {/* Label tags */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <span style={tagStyle}>Syne 800</span>
-        <span style={tagStyle}>Manrope 300</span>
-        <span style={tagStyle}>Bold & Modern</span>
-      </div>
-    </div>
-  );
-});
-
-TypographySpecimen.displayName = 'TypographySpecimen';
-
 // Our Story / About Section
 const OurStorySection = memo(() => {
   const [isVisible, setIsVisible] = useState(false);
@@ -1557,9 +1442,6 @@ const HomeScreen = memo(({
           <div style={{ flex: '0 0 8px' }} />
         </div>
       </div>
-
-      {/* Brand Typography Specimen */}
-      <TypographySpecimen />
 
       {/* Our Story / About Section */}
       <OurStorySection />
