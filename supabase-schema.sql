@@ -17,25 +17,24 @@ INSERT INTO categories (name, color) VALUES
     ('Market', '#E8783A'),
     ('Event', '#4A82C4'),
     ('Fun', '#E8783A'),
-    ('Other', '#888880');
+    ('Other', '#888880')
+ON CONFLICT (name) DO NOTHING;
 
 -- Profiles table (for ALL users - customers and business owners)
-CREATE TABLE profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+CREATE TABLE IF NOT EXISTS profiles (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL DEFAULT 'User',
     email VARCHAR(255) NOT NULL,
-    role VARCHAR(20) DEFAULT 'customer', -- 'customer' or 'business'
+    role VARCHAR(20) DEFAULT 'event_goer',
     avatar_url VARCHAR(500),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Businesses table (additional data for business accounts)
-CREATE TABLE businesses (
+CREATE TABLE IF NOT EXISTS businesses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
-    profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     business_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
@@ -49,7 +48,7 @@ CREATE TABLE businesses (
 );
 
 -- Events table
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
     category_id INTEGER REFERENCES categories(id),
@@ -88,7 +87,7 @@ CREATE TABLE events (
 );
 
 -- Saved events table (for customers to save/favorite events)
-CREATE TABLE saved_events (
+CREATE TABLE IF NOT EXISTS saved_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
@@ -97,14 +96,14 @@ CREATE TABLE saved_events (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_profiles_user_id ON profiles(user_id);
-CREATE INDEX idx_profiles_role ON profiles(role);
-CREATE INDEX idx_events_category ON events(category_id);
-CREATE INDEX idx_events_status ON events(status);
-CREATE INDEX idx_events_start_time ON events(start_time);
-CREATE INDEX idx_events_location ON events(area);
-CREATE INDEX idx_events_business ON events(business_id);
-CREATE INDEX idx_saved_events_user ON saved_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
+CREATE INDEX IF NOT EXISTS idx_events_category ON events(category_id);
+CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
+CREATE INDEX IF NOT EXISTS idx_events_location ON events(area);
+CREATE INDEX IF NOT EXISTS idx_events_business ON events(business_id);
+CREATE INDEX IF NOT EXISTS idx_saved_events_user ON saved_events(user_id);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -114,10 +113,12 @@ ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_events ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for categories (public read-only)
+DROP POLICY IF EXISTS "Categories are viewable by everyone" ON categories;
 CREATE POLICY "Categories are viewable by everyone"
     ON categories FOR SELECT USING (true);
 
 -- Note: Only admins should modify categories
+DROP POLICY IF EXISTS "Only admins can insert categories" ON categories;
 CREATE POLICY "Only admins can insert categories"
     ON categories FOR INSERT WITH CHECK (
         EXISTS (
@@ -126,6 +127,7 @@ CREATE POLICY "Only admins can insert categories"
         )
     );
 
+DROP POLICY IF EXISTS "Only admins can update categories" ON categories;
 CREATE POLICY "Only admins can update categories"
     ON categories FOR UPDATE USING (
         EXISTS (
@@ -134,6 +136,7 @@ CREATE POLICY "Only admins can update categories"
         )
     );
 
+DROP POLICY IF EXISTS "Only admins can delete categories" ON categories;
 CREATE POLICY "Only admins can delete categories"
     ON categories FOR DELETE USING (
         EXISTS (
@@ -143,29 +146,41 @@ CREATE POLICY "Only admins can delete categories"
     );
 
 -- RLS Policies for profiles
-CREATE POLICY "Profiles are viewable by everyone"
-    ON profiles FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
+CREATE POLICY "Users can view their own profile"
+    ON profiles FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
 CREATE POLICY "Users can insert their own profile"
     ON profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
 CREATE POLICY "Users can update their own profile"
     ON profiles FOR UPDATE USING (auth.uid() = user_id);
 
 -- RLS Policies for businesses
+DROP POLICY IF EXISTS "Businesses are viewable by everyone" ON businesses;
 CREATE POLICY "Businesses are viewable by everyone"
     ON businesses FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can insert their own business" ON businesses;
 CREATE POLICY "Users can insert their own business"
     ON businesses FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own business" ON businesses;
 CREATE POLICY "Users can update their own business"
     ON businesses FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own business" ON businesses;
+CREATE POLICY "Users can delete their own business"
+    ON businesses FOR DELETE USING (auth.uid() = user_id);
+
 -- RLS Policies for events
+DROP POLICY IF EXISTS "Published events are viewable by everyone" ON events;
 CREATE POLICY "Published events are viewable by everyone"
     ON events FOR SELECT USING (status = 'published');
 
+DROP POLICY IF EXISTS "Business owners can view all their events" ON events;
 CREATE POLICY "Business owners can view all their events"
     ON events FOR SELECT USING (
         business_id IN (
@@ -173,6 +188,7 @@ CREATE POLICY "Business owners can view all their events"
         )
     );
 
+DROP POLICY IF EXISTS "Business owners can insert events" ON events;
 CREATE POLICY "Business owners can insert events"
     ON events FOR INSERT WITH CHECK (
         business_id IN (
@@ -180,6 +196,7 @@ CREATE POLICY "Business owners can insert events"
         )
     );
 
+DROP POLICY IF EXISTS "Business owners can update their events" ON events;
 CREATE POLICY "Business owners can update their events"
     ON events FOR UPDATE USING (
         business_id IN (
@@ -187,6 +204,7 @@ CREATE POLICY "Business owners can update their events"
         )
     );
 
+DROP POLICY IF EXISTS "Business owners can delete their events" ON events;
 CREATE POLICY "Business owners can delete their events"
     ON events FOR DELETE USING (
         business_id IN (
@@ -195,12 +213,15 @@ CREATE POLICY "Business owners can delete their events"
     );
 
 -- RLS Policies for saved_events
+DROP POLICY IF EXISTS "Users can view their own saved events" ON saved_events;
 CREATE POLICY "Users can view their own saved events"
     ON saved_events FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can save events" ON saved_events;
 CREATE POLICY "Users can save events"
     ON saved_events FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can unsave events" ON saved_events;
 CREATE POLICY "Users can unsave events"
     ON saved_events FOR DELETE USING (auth.uid() = user_id);
 
@@ -241,39 +262,27 @@ RETURNS TRIGGER AS $$
 DECLARE
     user_name TEXT;
     user_role TEXT;
-    business_name TEXT;
+    user_business_name TEXT;
 BEGIN
-    -- Extract values from user metadata
-    user_name := COALESCE(NEW.raw_user_meta_data->>'name', NEW.email);
-    user_role := COALESCE(NEW.raw_user_meta_data->>'role', 'customer');
-    business_name := NEW.raw_user_meta_data->>'business_name';
+    user_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email);
+    user_role := COALESCE(NEW.raw_user_meta_data->>'user_type', 'event_goer');
+    user_business_name := COALESCE(NEW.raw_user_meta_data->>'business_name', 'My Business');
 
     -- Create profile record for ALL users
     INSERT INTO profiles (user_id, name, email, role)
-    VALUES (
-        NEW.id,
-        user_name,
-        NEW.email,
-        user_role
-    );
+    VALUES (NEW.id, user_name, NEW.email, user_role);
 
-    -- If business role and business_name provided, also create business record
-    IF user_role = 'business' AND business_name IS NOT NULL AND business_name != '' THEN
-        INSERT INTO businesses (user_id, profile_id, business_name, email)
-        VALUES (
-            NEW.id,
-            (SELECT id FROM profiles WHERE user_id = NEW.id),
-            business_name,
-            NEW.email
-        );
+    -- Create business only for organisers
+    IF user_role = 'organiser' THEN
+        INSERT INTO businesses (user_id, business_name, email, event_count)
+        VALUES (NEW.id, user_business_name, NEW.email, 0);
     END IF;
 
     RETURN NEW;
-EXCEPTION
-    WHEN OTHERS THEN
-        -- Log the error but don't prevent user creation
-        RAISE WARNING 'Failed to create profile for user %: %', NEW.id, SQLERRM;
-        RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- Log warning but do not block auth user creation
+    RAISE WARNING 'handle_new_user failed: %', SQLERRM;
+    RETURN NEW;
 END;
 $$ language 'plpgsql' SECURITY DEFINER;
 

@@ -959,7 +959,7 @@ const CreateEvent = ({ user, onSave, onBack }) => {
             const firstErr = uploadErrors[0]?.error || '';
             console.error('[CreateEvent] Upload errors:', uploadErrors);
             setErrors({
-              submit: 'Images couldn\'t be uploaded. Check Supabase Storage → Policies for bucket "event-images": ensure INSERT (authenticated) and SELECT (anon) policies exist. Event will publish without images.',
+              submit: 'Images couldn\'t be uploaded. Check Supabase Storage → Policies for bucket "events-images": ensure INSERT (authenticated) and SELECT (anon) policies exist. Event will publish without images.',
             });
             // Continue to publish without images
           } else {

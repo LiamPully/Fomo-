@@ -3,119 +3,6 @@ import { supabase } from '../lib/supabase';
 import { useRateLimit } from './useRateLimit';
 import { safeLog } from '../lib/security';
 
-// Storage keys
-const AUTH_STORAGE_KEY = 'fomoza_auth_session';
-const AUTH_PERSISTENT_KEY = 'fomoza_auth_persistent';
-// Storage helpers
-const storage = {
-  local: {
-    get: (key) => {
-      try {
-        const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : null;
-      } catch {
-        return null;
-      }
-    },
-    set: (key, value) => {
-      try {
-        localStorage.setItem(key, JSON.stringify(value));
-      } catch (e) {
-        console.error('localStorage set error:', e);
-      }
-    },
-    remove: (key) => {
-      try {
-        localStorage.removeItem(key);
-      } catch (e) {
-        console.error('localStorage remove error:', e);
-      }
-    },
-  },
-  session: {
-    get: (key) => {
-      try {
-        const item = sessionStorage.getItem(key);
-        return item ? JSON.parse(item) : null;
-      } catch {
-        return null;
-      }
-    },
-    set: (key, value) => {
-      try {
-        sessionStorage.setItem(key, JSON.stringify(value));
-      } catch (e) {
-        console.error('sessionStorage set error:', e);
-      }
-    },
-    remove: (key) => {
-      try {
-        sessionStorage.removeItem(key);
-      } catch (e) {
-        console.error('sessionStorage remove error:', e);
-      }
-    },
-  },
-};
-
-// Save session to storage
-const saveSession = (session, keepSignedIn) => {
-  if (!session) return;
-
-  // Clear opposing storage first to prevent stale sessions
-  clearAllAuthStorage();
-
-  const expiresAtMs = session.expires_at
-    ? session.expires_at * 1000
-    : Date.now() + 3600 * 1000;
-
-  const sessionData = {
-    access_token: session.access_token,
-    refresh_token: session.refresh_token,
-    expires_at: expiresAtMs,
-    user: session.user,
-  };
-
-  if (keepSignedIn) {
-    storage.local.set(AUTH_PERSISTENT_KEY, sessionData);
-  } else {
-    storage.session.set(AUTH_STORAGE_KEY, sessionData);
-  }
-};
-
-// Clear all auth storage
-const clearAllAuthStorage = () => {
-  storage.local.remove(AUTH_PERSISTENT_KEY);
-  storage.session.remove(AUTH_STORAGE_KEY);
-};
-
-// Get stored session
-const getStoredSession = () => {
-  // Check localStorage first (persistent)
-  const persistentSession = storage.local.get(AUTH_PERSISTENT_KEY);
-  if (persistentSession) {
-    // Check if expired
-    if (Date.now() > persistentSession.expires_at) {
-      storage.local.remove(AUTH_PERSISTENT_KEY);
-      return null;
-    }
-    return { ...persistentSession, isPersistent: true };
-  }
-
-  // Check sessionStorage (session only)
-  const sessionData = storage.session.get(AUTH_STORAGE_KEY);
-  if (sessionData) {
-    // Check if expired
-    if (Date.now() > sessionData.expires_at) {
-      storage.session.remove(AUTH_STORAGE_KEY);
-      return null;
-    }
-    return { ...sessionData, isPersistent: false };
-  }
-
-  return null;
-};
-
 // Validation helper functions
 const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -149,17 +36,25 @@ const validateBusinessName = (name) => {
   return null;
 };
 
-// Sanitize error messages for user display
+// Sanitize error messages for user display — prevent user enumeration
 const sanitizeError = (error) => {
   if (!error) return 'An unexpected error occurred';
 
   const message = error.message || error;
 
-  // Map known Supabase errors to user-friendly messages
+  // Neutralize auth errors to prevent account enumeration
+  if (message.includes('Invalid login credentials')) {
+    return 'Invalid credentials. Please try again.';
+  }
+  if (message.includes('Email not confirmed')) {
+    return 'Invalid credentials. Please try again.';
+  }
+  if (message.includes('User already registered')) {
+    return 'If this email is not registered, a confirmation email has been sent.';
+  }
+
+  // Map remaining known Supabase errors to user-friendly messages
   const errorMap = {
-    'Invalid login credentials': 'Invalid email or password. Please try again.',
-    'Email not confirmed': 'Please confirm your email address before signing in.',
-    'User already registered': 'An account with this email already exists.',
     'Password should be at least 6 characters': 'Password must be at least 6 characters long.',
     'Unable to validate email address: invalid format': 'Please enter a valid email address.',
     'Auth session missing!': 'Your session has expired. Please sign in again.',
@@ -254,14 +149,6 @@ export function useAuth() {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) throw error;
-
-      if (!session) {
-        // Try to refresh
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) throw refreshError;
-        return refreshData.session;
-      }
-
       return session;
     } catch (err) {
       safeLog.error('Session refresh error:', err);
@@ -276,7 +163,8 @@ export function useAuth() {
     setError(null);
 
     // Check rate limiting
-    if (isResetRateLimited) {
+    const canProceed = checkResetRateLimit();
+    if (!canProceed || isResetRateLimited) {
       const errorMsg = `Too many password reset attempts. Please try again in ${resetRemainingTime} seconds.`;
       setError(errorMsg);
       return { success: false, error: errorMsg };
@@ -295,18 +183,23 @@ export function useAuth() {
       setError(sanitized);
       return { success: false, error: sanitized };
     }
-  }, [isResetRateLimited, resetRemainingTime, recordResetAttempt]);
+  }, [isResetRateLimited, resetRemainingTime, recordResetAttempt, checkResetRateLimit]);
 
   // Create business profile manually (fallback if trigger fails)
-  const createBusinessProfile = useCallback(async (userId, businessName) => {
+  const createBusinessProfile = useCallback(async (userId, businessName, userEmail = '') => {
     try {
+      const name = businessName?.trim();
+      if (!name || name.length < 2) {
+        safeLog.warn('Skipping business creation: invalid business name');
+        return null;
+      }
       const { data, error } = await supabase
         .from('businesses')
         .insert([
           {
             user_id: userId,
-            business_name: businessName.trim(),
-            created_at: new Date().toISOString(),
+            business_name: name,
+            email: userEmail || '',
           }
         ])
         .select()
@@ -343,8 +236,9 @@ export function useAuth() {
 
     setError(null);
 
-    // Check rate limiting for sign up
-    if (isSignUpRateLimited) {
+    // Check rate limiting
+    const canProceed = checkSignUpRateLimit();
+    if (!canProceed || isSignUpRateLimited) {
       const errorMsg = `Too many sign up attempts. Please try again in ${signUpRemainingTime} seconds.`;
       setError(errorMsg);
       return { success: false, error: errorMsg };
@@ -395,7 +289,7 @@ export function useAuth() {
           businessData = await fetchBusiness(authData.user.id);
 
           if (!businessData && businessName) {
-            businessData = await createBusinessProfile(authData.user.id, businessName);
+            businessData = await createBusinessProfile(authData.user.id, businessName, authData.user.email);
           }
         }
 
@@ -417,14 +311,15 @@ export function useAuth() {
       setError(sanitized);
       return { success: false, error: sanitized };
     }
-  }, [fetchBusiness, createBusinessProfile, isSignUpRateLimited, signUpRemainingTime, recordSignUpAttempt]);
+  }, [fetchBusiness, createBusinessProfile, isSignUpRateLimited, signUpRemainingTime, recordSignUpAttempt, checkSignUpRateLimit]);
 
   // Sign in with email/password
   const signIn = useCallback(async (email, password, keepSignedIn = false) => {
     setError(null);
 
     // Check rate limiting
-    if (isSignInRateLimited) {
+    const canProceed = checkSignInRateLimit();
+    if (!canProceed || isSignInRateLimited) {
       const errorMsg = `Too many sign in attempts. Please try again in ${signInRemainingTime} seconds.`;
       setError(errorMsg);
       return { success: false, error: errorMsg };
@@ -454,20 +349,32 @@ export function useAuth() {
 
       if (authError) throw authError;
 
+      // Handle session persistence preference
+      if (!keepSignedIn) {
+        try {
+          sessionStorage.setItem('fomoza_session_only', 'true');
+          sessionStorage.setItem('fomoza_tab_active', 'true');
+        } catch {
+          // ignore
+        }
+      } else {
+        try {
+          sessionStorage.removeItem('fomoza_session_only');
+          sessionStorage.removeItem('fomoza_tab_active');
+        } catch {
+          // ignore
+        }
+      }
+
       if (authData.user && authData.session) {
-        // Save session based on "Keep me signed in" preference
-        saveSession(authData.session, keepSignedIn);
-
-        // Wait for session to propagate before fetching business
-        await new Promise(resolve => setTimeout(resolve, 100));
-
         let businessData = await fetchBusiness(authData.user.id);
 
         // If no business record exists, try to create one from user metadata
         if (!businessData && authData.user.user_metadata?.business_name) {
           businessData = await createBusinessProfile(
             authData.user.id,
-            authData.user.user_metadata.business_name
+            authData.user.user_metadata.business_name,
+            authData.user.email
           );
         }
 
@@ -487,7 +394,7 @@ export function useAuth() {
       setError(sanitized);
       return { success: false, error: sanitized };
     }
-  }, [fetchBusiness, isSignInRateLimited, signInRemainingTime, recordSignInAttempt, createBusinessProfile]);
+  }, [fetchBusiness, isSignInRateLimited, signInRemainingTime, recordSignInAttempt, createBusinessProfile, checkSignInRateLimit]);
 
   // Sign out
   const signOut = useCallback(async () => {
@@ -495,9 +402,6 @@ export function useAuth() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-
-      // Clear all auth storage on logout
-      clearAllAuthStorage();
 
       setUser(null);
       setBusiness(null);
@@ -511,40 +415,49 @@ export function useAuth() {
 
   // Listen for auth state changes
   useEffect(() => {
-    // Check for existing session from storage or Supabase
+    // Remove legacy custom auth storage keys (migrated to Supabase secure storage)
+    try {
+      localStorage.removeItem('fomoza_auth_persistent');
+      sessionStorage.removeItem('fomoza_auth_session');
+    } catch {
+      // ignore storage errors
+    }
+
+    // Session-only mode: if user chose "don't keep me signed in" and this is a new tab, sign out
+    try {
+      const sessionOnly = sessionStorage.getItem('fomoza_session_only');
+      const tabActive = sessionStorage.getItem('fomoza_tab_active');
+      if (sessionOnly === 'true' && tabActive !== 'true') {
+        supabase.auth.signOut().then(() => {
+          sessionStorage.removeItem('fomoza_session_only');
+        });
+      }
+      // Mark this tab as active
+      sessionStorage.setItem('fomoza_tab_active', 'true');
+    } catch {
+      // ignore
+    }
+
+    // On page unload, remove the active tab marker (but keep session_only flag)
+    const handleBeforeUnload = () => {
+      try {
+        sessionStorage.removeItem('fomoza_tab_active');
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     const checkSession = async () => {
       try {
-        // First check localStorage/sessionStorage
-        const storedSession = getStoredSession();
-
-        if (storedSession) {
-          // Restore the session to Supabase
-          const { data: { session }, error } = await supabase.auth.setSession({
-            access_token: storedSession.access_token,
-            refresh_token: storedSession.refresh_token,
-          });
-
-          if (!error && session?.user) {
-            setUser(session.user);
-            const businessData = await fetchBusiness(session.user.id);
-            setBusiness(businessData);
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Fallback: check Supabase native session
-        const session = await refreshSession();
-
-        if (session?.user) {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (!error && session?.user) {
           setUser(session.user);
           const businessData = await fetchBusiness(session.user.id);
           setBusiness(businessData);
         }
       } catch (err) {
         safeLog.error('Session check error:', err);
-        // Clear invalid stored sessions
-        clearAllAuthStorage();
       } finally {
         setLoading(false);
       }
@@ -552,31 +465,9 @@ export function useAuth() {
 
     checkSession();
 
-    // Periodic session validation every 5 minutes
-    const validationInterval = setInterval(async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) {
-          const stored = getStoredSession();
-          if (stored) {
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            if (refreshError || !refreshData.session) {
-              clearAllAuthStorage();
-              setUser(null);
-              setBusiness(null);
-            }
-          }
-        }
-      } catch (err) {
-        safeLog.error('Periodic session validation error:', err);
-      }
-    }, 5 * 60 * 1000);
-
-    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          // Add computed firstName to user object
           const enhancedUser = {
             ...session.user,
             firstName: session.user.user_metadata?.full_name?.split(' ')[0]
@@ -584,15 +475,14 @@ export function useAuth() {
               || 'User'
           };
           setUser(enhancedUser);
-          // Small delay for trigger to complete
           await new Promise(resolve => setTimeout(resolve, 100));
           let businessData = await fetchBusiness(session.user.id);
 
-          // Fallback: create business if missing and we have metadata
           if (!businessData && session.user.user_metadata?.business_name) {
             businessData = await createBusinessProfile(
               session.user.id,
-              session.user.user_metadata.business_name
+              session.user.user_metadata.business_name,
+              session.user.email
             );
           }
 
@@ -600,24 +490,18 @@ export function useAuth() {
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setBusiness(null);
-          clearAllAuthStorage();
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           setUser(session.user);
-          // Update stored session with new tokens
-          const stored = getStoredSession();
-          if (stored) {
-            saveSession(session, stored.isPersistent);
-          }
         }
         setLoading(false);
       }
     );
 
     return () => {
-      clearInterval(validationInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       subscription.unsubscribe();
     };
-  }, [fetchBusiness, refreshSession, createBusinessProfile]);
+  }, [fetchBusiness, createBusinessProfile]);
 
   // Update business data (e.g., after creating an event)
   const refreshBusiness = useCallback(async () => {
@@ -628,13 +512,55 @@ export function useAuth() {
       if (!businessData && user.user_metadata?.business_name) {
         businessData = await createBusinessProfile(
           user.id,
-          user.user_metadata.business_name
+          user.user_metadata.business_name,
+          user.email
         );
       }
 
       setBusiness(businessData);
     }
   }, [user, fetchBusiness, createBusinessProfile]);
+
+  // Refresh user metadata from Supabase (e.g., after profile edit)
+  const refreshUser = useCallback(async () => {
+    try {
+      const { data: { user: refreshedUser }, error } = await supabase.auth.getUser();
+      if (!error && refreshedUser) {
+        const enhancedUser = {
+          ...refreshedUser,
+          firstName: refreshedUser.user_metadata?.full_name?.split(' ')[0]
+            || refreshedUser.email?.split('@')[0]
+            || 'User'
+        };
+        setUser(enhancedUser);
+      }
+    } catch (err) {
+      safeLog.error('Refresh user error:', err);
+    }
+  }, []);
+
+  // Delete account — removes all user data from public tables and signs out
+  const deleteAccount = useCallback(async () => {
+    if (!user?.id) return { success: false, error: 'Not authenticated' };
+    try {
+      // Delete user's events
+      await supabase.from('events').delete().eq('user_id', user.id);
+      // Delete saved events
+      await supabase.from('saved_events').delete().eq('user_id', user.id);
+      // Delete business record
+      await supabase.from('businesses').delete().eq('user_id', user.id);
+      // Delete profile
+      await supabase.from('profiles').delete().eq('user_id', user.id);
+      // Sign out (auth user deletion requires admin/service role — not possible client-side)
+      await supabase.auth.signOut();
+      setUser(null);
+      setBusiness(null);
+      return { success: true, error: null };
+    } catch (err) {
+      safeLog.error('Delete account error:', err);
+      return { success: false, error: 'Failed to delete account. Please try again.' };
+    }
+  }, [user]);
 
   return {
     user,
@@ -646,8 +572,10 @@ export function useAuth() {
     signOut,
     sendPasswordReset,
     refreshBusiness,
+    refreshUser,
     refreshSession,
     createBusinessProfile,
+    deleteAccount,
     clearError: () => setError(null),
     isAuthenticated: !!user,
   };
