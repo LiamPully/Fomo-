@@ -25,11 +25,13 @@ export default defineConfig(({ mode }) => {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for React
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https: blob:",
-    "connect-src 'self' https://*.supabase.co https://maps.googleapis.com https://picsum.photos",
+    "img-src 'self' data: blob: https://*.supabase.co https://picsum.photos https://maps.googleapis.com https://lh3.googleusercontent.com",
+    "connect-src 'self' https://*.supabase.co https://maps.googleapis.com",
     "frame-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",
+    "manifest-src 'self'",
+    "worker-src 'self'",
   ]
 
   if (isProduction) {

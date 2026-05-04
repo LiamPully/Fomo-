@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { safeLog } from '../lib/security'
 import { validateBusinessData, validateUUID } from '../lib/validation'
 
 // Get or create business for current user
@@ -47,7 +48,7 @@ export const getOrCreateBusiness = async (userId, businessData) => {
     if (error) throw error
     return { data, error: null }
   } catch (error) {
-    console.error('Error getting/creating business:', error)
+    safeLog.error('Error getting/creating business:', error)
     return { data: null, error }
   }
 }
@@ -69,7 +70,7 @@ export const getMyBusiness = async () => {
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
-    console.error('Error fetching own business:', error)
+    safeLog.error('Error fetching own business:', error)
     return { data: null, error }
   }
 }
@@ -92,7 +93,7 @@ export const getBusiness = async (id) => {
     if (error) throw error
     return { data, error: null }
   } catch (error) {
-    console.error('Error fetching business:', error)
+    safeLog.error('Error fetching business:', error)
     return { data: null, error }
   }
 }
@@ -189,7 +190,7 @@ export const updateBusiness = async (id, updates) => {
     if (error) throw error
     return { data, error: null }
   } catch (error) {
-    console.error('Error updating business:', error)
+    safeLog.error('Error updating business:', error)
     return { data: null, error }
   }
 }
@@ -223,7 +224,7 @@ export const incrementEventCount = async (businessId) => {
     if (error) throw error
     return { data, error: null }
   } catch (error) {
-    console.error('Error incrementing event count:', error)
+    safeLog.error('Error incrementing event count:', error)
     return { data: null, error }
   }
 }
@@ -259,7 +260,7 @@ export const canPublishEvent = async (businessId) => {
       error: null
     }
   } catch (error) {
-    console.error('Error checking publish ability:', error)
+    safeLog.error('Error checking publish ability:', error)
     return { data: null, error }
   }
 }

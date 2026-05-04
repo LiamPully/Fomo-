@@ -765,6 +765,7 @@ const AccountScreen = ({
   onNotificationPrefs,
   onSignIn,
   onSignOut,
+  onDeleteAccount,
   onEditLocation,
   loading = false,
 }) => {
@@ -896,10 +897,19 @@ const AccountScreen = ({
         message="This action cannot be undone. All your data will be permanently deleted."
         confirmText="Delete"
         danger
-        onConfirm={() => {
+        onConfirm={async () => {
           setShowDeleteConfirm(false);
-          // TODO: Implement account deletion
-          alert("Account deletion request submitted");
+          setIsProcessing(true);
+          try {
+            const result = await onDeleteAccount?.();
+            if (result?.success) {
+              alert("Your account has been deleted.");
+            } else {
+              alert(result?.error || "Failed to delete account. Please try again.");
+            }
+          } finally {
+            setIsProcessing(false);
+          }
         }}
         onCancel={() => setShowDeleteConfirm(false)}
       />

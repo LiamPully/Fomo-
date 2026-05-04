@@ -17,13 +17,13 @@ export const fetchEvents = async (filters = {}) => {
 
     // Apply category filter - first get category ID
     if (filters.category && filters.category !== 'All') {
-      const { data: categoryData } = await supabase
+      const { data: categoryData, error: catError } = await supabase
         .from('categories')
         .select('id')
         .eq('name', filters.category)
-        .single()
+        .maybeSingle()
 
-      if (categoryData) {
+      if (!catError && categoryData) {
         query = query.eq('category_id', categoryData.id)
       }
     }
@@ -34,37 +34,42 @@ export const fetchEvents = async (filters = {}) => {
 
       switch (filters.period) {
         case 'Today':
+          const todayStart = new Date(now)
+          todayStart.setHours(0, 0, 0, 0)
           const todayEnd = new Date(now)
           todayEnd.setHours(23, 59, 59, 999)
           query = query
-            .gte('start_time', now.toISOString())
+            .gte('start_time', todayStart.toISOString())
             .lte('start_time', todayEnd.toISOString())
           break
 
         case 'This Week':
+          const weekStart = new Date(now)
+          weekStart.setHours(0, 0, 0, 0)
           const weekEnd = new Date(now)
           weekEnd.setDate(weekEnd.getDate() + 7)
           query = query
-            .gte('start_time', now.toISOString())
+            .gte('start_time', weekStart.toISOString())
             .lte('start_time', weekEnd.toISOString())
           break
 
         case 'This Month':
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
           const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          monthEnd.setHours(23, 59, 59, 999)
           query = query
-            .gte('start_time', now.toISOString())
+            .gte('start_time', monthStart.toISOString())
             .lte('start_time', monthEnd.toISOString())
           break
       }
     }
 
-    // Apply location filter (sanitized)
+    // Apply location filter (sanitized — strip wildcard chars)
     if (filters.area) {
-      const sanitizedArea = filters.area
-        .replace(/%/g, '\\%')
-        .replace(/_/g, '\\_')
-        .replace(/\\/g, '\\\\')
-      query = query.ilike('area', `%${sanitizedArea}%`)
+      const sanitizedArea = String(filters.area).replace(/[%_\\]/g, '')
+      if (sanitizedArea) {
+        query = query.ilike('area', `%${sanitizedArea}%`)
+      }
     }
 
     // Add limit for performance
@@ -377,13 +382,14 @@ export const fetchBusinessEvents = async (businessId) => {
 // Search events by text
 export const searchEvents = async (searchTerm) => {
   try {
-    // Sanitize search term to prevent injection
-    const sanitized = searchTerm
-      .replace(/%/g, '\\%')
-      .replace(/_/g, '\\_')
-      .replace(/\\/g, '\\\\')
-      .replace(/,/g, ' ')
-      .replace(/[()]/g, ' ')
+    // Sanitize search term — strip wildcard chars to avoid LIKE injection
+    const sanitized = String(searchTerm || '')
+      .replace(/[%_\\]/g, '')
+      .replace(/[,()]/g, ' ')
+
+    if (!sanitized.trim()) {
+      return { data: [], error: null };
+    }
 
     // Use three parallel queries with individual ilike filters to avoid .or() string injection
     const [titleResult, descResult, areaResult] = await Promise.all([
@@ -431,33 +437,28 @@ export const toggleSaveEvent = async (eventId) => {
       return { data: null, error: { message: 'Authentication required' } };
     }
 
-    // Check if already saved
-    const { data: existing } = await supabase
+    // Atomic toggle: try insert first, catch unique violation and delete instead
+    const { error: insertError } = await supabase
       .from('saved_events')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('event_id', eventId)
-      .maybeSingle();
+      .insert([{ user_id: user.id, event_id: eventId }]);
 
-    if (existing) {
-      // Unsave
-      const { error } = await supabase
+    if (!insertError) {
+      return { data: { saved: true }, error: null };
+    }
+
+    // If unique constraint violation (already saved), unsave it
+    if (insertError.code === '23505') {
+      const { error: deleteError } = await supabase
         .from('saved_events')
         .delete()
         .eq('user_id', user.id)
         .eq('event_id', eventId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
       return { data: { saved: false }, error: null };
-    } else {
-      // Save
-      const { error } = await supabase
-        .from('saved_events')
-        .insert([{ user_id: user.id, event_id: eventId }]);
-
-      if (error) throw error;
-      return { data: { saved: true }, error: null };
     }
+
+    throw insertError;
   } catch (error) {
     safeLog.error('Error toggling save:', error)
     return { data: null, error }

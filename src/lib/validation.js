@@ -47,6 +47,9 @@ export const validateUUID = (id) => {
  * Validates event data before creation/update
  */
 export const validateEventData = (data) => {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, errors: ['Invalid event data'], data: {} };
+  }
   const errors = [];
   const sanitized = {};
 
@@ -239,6 +242,9 @@ export const validateEventData = (data) => {
  * Validates business data
  */
 export const validateBusinessData = (data) => {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, errors: ['Invalid business data'], data: {} };
+  }
   const errors = [];
   const sanitized = {};
 

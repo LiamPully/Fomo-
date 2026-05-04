@@ -14,6 +14,22 @@ if (!isValidConfig) {
 
 // Create a mock client for development if config is missing
 const createMockClient = () => {
+  const chain = {
+    eq: () => chain,
+    gte: () => chain,
+    lte: () => chain,
+    ilike: () => chain,
+    order: () => chain,
+    limit: () => chain,
+    maybeSingle: async () => ({ data: null, error: null }),
+    single: async () => ({ data: null, error: null }),
+    select: () => chain,
+    insert: () => ({ select: () => ({ single: async () => ({ data: null, error: null }) }) }),
+    update: () => chain,
+    delete: () => chain,
+    upsert: () => chain,
+    rpc: async () => ({ data: null, error: null }),
+  };
   return {
     auth: {
       signUp: async () => ({ error: { message: 'Supabase not configured' } }),
@@ -22,12 +38,18 @@ const createMockClient = () => {
       getUser: async () => ({ data: { user: null }, error: null }),
       getSession: async () => ({ data: { session: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      resend: async () => ({ error: { message: 'Supabase not configured' } }),
+      updateUser: async () => ({ error: { message: 'Supabase not configured' } }),
     },
-    from: () => ({
-      select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }),
-      insert: () => ({ select: () => ({ single: async () => ({ data: null, error: null }) }) }),
-      update: () => ({ eq: () => ({ select: () => ({ single: async () => ({ data: null, error: null }) }) }) }),
-    }),
+    from: () => chain,
+    rpc: async () => ({ data: null, error: null }),
+    storage: {
+      from: () => ({
+        upload: async () => ({ data: null, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: '' } }),
+        remove: async () => ({ data: null, error: null }),
+      }),
+    },
   }
 }
 
@@ -36,6 +58,11 @@ const createSupabaseClient = () => {
   return createClient(supabaseUrl, supabaseAnonKey, {
     db: {
       schema: 'public'
+    },
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
     },
     global: {
       headers: {

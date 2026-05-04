@@ -8,24 +8,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "expo:start": "expo start",
-    "expo:android": "expo start --android",
-    "expo:ios": "expo start --ios",
-    "expo:web": "expo start --web",
     "db:verify": "node scripts/verify-database.js"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.0",
     "@supabase/supabase-js": "^2.99.1",
-    "@types/react": "~19.2.10",
-    "@types/react-dom": "~19.1.7",
-    "expo": "^55.0.6",
-    "expo-status-bar": "~55.0.4",
     "jose": "^6.2.2",
     "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "react-native": "0.83.2",
-    "react-native-web": "^0.21.0"
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.10",

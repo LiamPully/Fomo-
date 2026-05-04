@@ -33,7 +33,7 @@ const Toggle = ({ checked, onChange, label, description }) => {
             top: 3,
             left: checked ? 23 : 3,
             transition: "left 0.2s ease",
-            boxShadow: "0 2px 4px SHADOW_CARD",
+            boxShadow: `0 2px 4px ${SHADOW_CARD}`,
           }}
         />
       </button>

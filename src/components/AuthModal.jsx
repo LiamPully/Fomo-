@@ -479,6 +479,7 @@ const AuthModal = ({
 
   // Submit registration
   const submitRegistration = useCallback(async () => {
+    if (loading) return;
     if (!validateForm()) return;
 
     setLoading(true);
@@ -518,6 +519,7 @@ const AuthModal = ({
 
   // Submit login
   const submitLogin = useCallback(async () => {
+    if (loading) return;
     const email = emailRef.current?.value || "";
     const pass = passwordRef.current?.value || "";
 

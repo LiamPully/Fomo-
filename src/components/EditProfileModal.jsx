@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { supabase } from "../lib/supabase";
+import { safeLog } from "../lib/security";
 import {
   BG, WHITE, BLACK, GRAY, GRAY_LIGHT, GRAY_MEDIUM, ACCENT, ACCENT_LIGHT, FONT,
   SHADOW_CARD, OVERLAY_DARK, ERROR, ERROR_LIGHT,
@@ -76,11 +77,11 @@ const EditProfileModal = ({ open, onClose, user, onProfileUpdated }) => {
       promises.push(
         supabase.auth.updateUser({
           data: { full_name: trimmedName },
-        }).catch(console.error)
+        }).catch(err => safeLog.error('Auth update failed:', err))
       );
 
       // Update businesses table if user is an organiser
-      if (user.userType === 'organiser') {
+      if (user.user_type === 'organiser') {
         promises.push(
           supabase
             .from("businesses")
@@ -89,24 +90,24 @@ const EditProfileModal = ({ open, onClose, user, onProfileUpdated }) => {
               updated_at: new Date().toISOString(),
             })
             .eq("user_id", user.id)
-            .then(() => console.log("[EditProfile] Business updated"))
-            .catch(err => console.error("[EditProfile] Business update failed:", err))
+            .then(() => safeLog.log("[EditProfile] Business updated"))
+            .catch(err => safeLog.error("[EditProfile] Business update failed:", err))
         );
       }
 
-      // Update profiles table (universal)
+      // Update profiles table (universal) — matches schema: user_id, name, email, role
       promises.push(
         supabase
           .from("profiles")
           .upsert({
-            id: user.id,
-            full_name: trimmedName,
-            bio: bio.trim(),
-            phone: phone.trim(),
+            user_id: user.id,
+            name: trimmedName,
+            email: user.email || '',
+            role: user.user_type || 'event_goer',
             updated_at: new Date().toISOString(),
-          })
-          .then(() => console.log("[EditProfile] Profile updated"))
-          .catch(err => console.error("[EditProfile] Profile update failed:", err))
+          }, { onConflict: 'user_id' })
+          .then(() => safeLog.log("[EditProfile] Profile updated"))
+          .catch(err => safeLog.error("[EditProfile] Profile update failed:", err))
       );
 
       await Promise.all(promises);
@@ -115,7 +116,7 @@ const EditProfileModal = ({ open, onClose, user, onProfileUpdated }) => {
         setSaving(false);
       }
     } catch (err) {
-      console.error("[EditProfile] Update error:", err);
+      safeLog.error("[EditProfile] Update error:", err);
       if (isMounted.current) {
         setSaving(false);
       }
