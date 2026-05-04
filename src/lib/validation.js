@@ -202,11 +202,11 @@ export const validateEventData = (data) => {
 
   // Business ID validation (required)
   if (!data.business_id) {
-    errors.push('Business ID is required');
+    errors.push('Business profile is required. Please sign in with an organiser account.');
   } else {
     const uuidCheck = validateUUID(data.business_id);
     if (!uuidCheck.valid) {
-      errors.push('Invalid business ID');
+      errors.push('Invalid business profile ID. Please contact support.');
     } else {
       sanitized.business_id = data.business_id;
     }

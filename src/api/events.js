@@ -131,14 +131,61 @@ export const createEvent = async (eventData) => {
     if (!enrichedData.business_id) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: biz } = await supabase
+        const { data: biz, error: bizError } = await supabase
           .from('businesses')
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
+
+        if (bizError) {
+          return {
+            data: null,
+            error: { message: 'Could not verify business profile. Please try again.' }
+          };
+        }
+
         if (biz) {
           enrichedData.business_id = biz.id;
+        } else {
+          // No business found — auto-create one if user is an organiser
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, name')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (profile?.role === 'organiser') {
+            const { data: newBiz, error: createBizError } = await supabase
+              .from('businesses')
+              .insert([{
+                user_id: user.id,
+                business_name: profile.name || 'My Business',
+                email: user.email || '',
+                event_count: 0,
+              }])
+              .select('id')
+              .single();
+
+            if (createBizError) {
+              return {
+                data: null,
+                error: { message: 'Could not auto-create business profile. Please try again.' }
+              };
+            }
+
+            enrichedData.business_id = newBiz.id;
+          } else {
+            return {
+              data: null,
+              error: { message: 'No business profile found. You need an organiser account to create events.' }
+            };
+          }
         }
+      } else {
+        return {
+          data: null,
+          error: { message: 'Authentication required to create events.' }
+        };
       }
     }
 
